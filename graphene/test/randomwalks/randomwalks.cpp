@@ -23,6 +23,7 @@ sa_t *sa, sa_t *sa_prev)
 	// std::cout<<"vert_id: " << vert_id << std::endl;
 	return false;
 }
+//test the git commit -v
 
 int main(int argc, char **argv) 
 {
