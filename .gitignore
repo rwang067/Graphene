@@ -1,0 +1,6 @@
+# ignore all files in the converter/LJ/ directory
+converter/LJ/
+graphene/test/rw_pr/iostat_pagerank.log
+*.o
+*.log
+*.bin
