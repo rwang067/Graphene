@@ -4,6 +4,7 @@ progress of experiments:
 	 problem ： as for the memmap:can not allocate memory problem:
 	 solution :     sudo su 
 	            	echo 10240 > /proc/sys/vm/nr_hugepages
+					cat /proc/sys/vm/nr_hugepages
 
 	problem : ‘MAP_HUGE_2MB’ was not declared in this scope
 	solution : Add `#define MAP_HUGE_2MB (21 << MAP_HUGE_SHIFT)` into /usr/include/x86_64-linux-gnu/asm/mman.h
@@ -24,7 +25,7 @@ progress of experiments:
 1、终端命令 (跑N×1*6的random walks)：
      -> cd  ** /Graphene-master/graphene/test/randomwalks
      -> gdb ./aio_randomwalks.bin
-     -> set args 1 1 2 '/home/wang/Documents/graph processing system/Graphene-master/converter/LJ' '/home/wang/Documents/graph processing system/Graphene-master/converter/LJ' soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 1 2
+     -> set args 1 1 2 ../../../converter/LJ ../../../converter/LJ soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 1 2
 
 2、输入参数
 	-- /path/to/exe = ./aio_randomwalks.bin

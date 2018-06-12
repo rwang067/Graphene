@@ -10,7 +10,10 @@
             },
             "includePath": [
                 "${workspaceFolder}",
-                "${workspaceFolder}/graphene/lib"
+                "${workspaceFolder}/graphene/lib",
+                "${workspaceFolder}/graphene/test",
+                "${workspaceFolder}/graphene/walks",
+                "${workspaceFolder}/graphene/test/randomwalks"
             ],
             "defines": [],
             "cStandard": "c11",

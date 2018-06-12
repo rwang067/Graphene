@@ -2,10 +2,11 @@
 #include "comm.h"
 #include "cache_driver.h"
 #include "circle.h"
+#include "walk.hpp"
 
 #ifndef __ITERATOR__
 #define __ITERATOR__
-typedef bool (*cb_func)(index_t, sa_t, sa_t*, sa_t *);
+typedef bool (*cb_func)(index_t, sa_t, sa_t*);
 
 class IO_smart_iterator
 {
@@ -48,7 +49,8 @@ class IO_smart_iterator
 
 		//for IO loading
 		index_t total_blks;
-		bit_t *reqt_blk_bitmap;
+		// bit_t *reqt_blk_bitmap;
+		bit_t *reqt_blk_walkmap;
 		vertex_t *blk_beg_vert;
 		index_t vert_per_chunk;
 		index_t reqt_blk_count; // number of request to be issued
@@ -61,8 +63,9 @@ class IO_smart_iterator
 		//for user layer
 		sa_t my_level;
 		bool io_conserve;
-		sa_t *sa_ptr;
-		sa_t *sa_prev;
+		// sa_t *sa_ptr;
+		// sa_t *sa_prev;
+		WalkManager *walk_manager;
 		index_t *beg_pos_ptr;
 		vertex_t **front_queue;
 		index_t *front_count;
@@ -97,7 +100,8 @@ class IO_smart_iterator
 				const char *csr_header,
 				const index_t num_chunks,
 				const size_t chunk_sz,
-				sa_t * &sa,sa_t* &sa_prev,
+				// sa_t * &sa,sa_t* &sa_prev,
+				WalkManager* &walk_maneger,
 				index_t* &beg_pos, 
 				index_t num_buffs,
 				index_t ring_vert_count,
@@ -119,7 +123,8 @@ class IO_smart_iterator
 				const char *csr_header,
 				const index_t num_chunks,
 				const size_t chunk_sz,
-				sa_t * &sa,sa_t* &sa_prev,
+				// sa_t * &sa,sa_t* &sa_prev,
+				WalkManager* &walk_maneger,
 				index_t* &beg_pos, 
 				index_t num_buffs,
 				index_t ring_vert_count,
@@ -138,7 +143,8 @@ class IO_smart_iterator
 				const char *csr_header,
 				const index_t num_chunks,
 				const size_t chunk_sz,
-				sa_t * &sa,sa_t* &sa_prev,
+				// sa_t * &sa,sa_t* &sa_prev,
+				WalkManager* &walk_maneger,
 				index_t* &beg_pos, 
 				index_t MAX_USELESS,
 				const index_t io_limit,
@@ -172,6 +178,7 @@ class IO_smart_iterator
 		void req_sort_gpu();
 		void front_sort_cpu();
 		void req_convert_list();
+		void req_vertex(index_t vert); //Wang , 2018.6.6
 
 		void init_sort_key(	long &num_elements,
 				sa_t criterion);

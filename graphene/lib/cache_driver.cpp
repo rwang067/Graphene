@@ -8,7 +8,7 @@
 //bitmap + req_list together
 cache_driver::cache_driver(
 			int fd_csr,
-			bit_t* &reqt_blk_bitmap,
+			bit_t* &reqt_blk_walkmap,
 			index_t* &reqt_list,
 			index_t *reqt_blk_count,
 			const index_t total_blks,
@@ -18,7 +18,7 @@ cache_driver::cache_driver(
 			const size_t chunk_sz,
 			const index_t io_limit,
 			index_t MAX_USELESS):
-	cache_driver(fd_csr, reqt_blk_bitmap, reqt_blk_count,
+	cache_driver(fd_csr, reqt_blk_walkmap, reqt_blk_count,
 			total_blks, blk_beg_vert, io_conserve, 
 			num_chunks, chunk_sz, io_limit, MAX_USELESS)
 {
@@ -29,7 +29,7 @@ cache_driver::cache_driver(
 //bitmap only implementation
 cache_driver::cache_driver(
 			int fd_csr,
-			bit_t* &reqt_blk_bitmap,
+			bit_t* &reqt_blk_walkmap,
 			index_t *reqt_blk_count,
 			const index_t total_blks,
 			vertex_t *blk_beg_vert,
@@ -41,7 +41,7 @@ cache_driver::cache_driver(
 	num_chunks(num_chunks),fd_csr(fd_csr),
 	reqt_blk_count(reqt_blk_count),
 	chunk_sz(chunk_sz),io_conserve(io_conserve),
-	reqt_blk_bitmap(reqt_blk_bitmap),
+	reqt_blk_walkmap(reqt_blk_walkmap),
 	total_blks(total_blks),io_limit(io_limit),
 	blk_beg_vert(blk_beg_vert),MAX_USELESS(MAX_USELESS)
 {
@@ -255,7 +255,7 @@ void cache_driver::load_chunk()
 	while((load_blk_off<total_blks) && (*reqt_blk_count != 0))
 	{
 		//find a to-be-load block
-		if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
+		if(reqt_blk_walkmap[load_blk_off] > 0)
 		{
 			//Get one free chunk
 			//-record this chunk is submmited
@@ -271,7 +271,7 @@ void cache_driver::load_chunk()
 
 			//clean this bit
 			--(*reqt_blk_count);
-			reqt_blk_bitmap[load_blk_off>>3] &= (~(1<<(load_blk_off&7)));
+			reqt_blk_walkmap[load_blk_off] = 0;
 			
 			//update chunk metadata
 			cache[chunk_id]->status = LOADING;
@@ -293,12 +293,12 @@ void cache_driver::load_chunk()
 				++load_blk_off;
 				if(load_blk_off+1-beg_blk_id>blk_per_chunk) break;
 				
-				if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
+				if(reqt_blk_walkmap[load_blk_off] > 0)
 				{
 					//continuous_useless_blk=0;
 
 					--(*reqt_blk_count);
-					reqt_blk_bitmap[load_blk_off>>3] &= (~(1<<(load_blk_off&7)));
+					reqt_blk_walkmap[load_blk_off] = 0;
 					cache[chunk_id]->load_sz=(load_blk_off+1-beg_blk_id)*VERT_PER_BLK;
 					
 					//init load_blk_off for next level scanning

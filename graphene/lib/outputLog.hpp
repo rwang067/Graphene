@@ -23,7 +23,7 @@ int printLog(int level, int vert_count, sa_t* sa_curr, const char* beg_dir, bool
 		sort(res,res+vert_count,res_compare);
 		int ntop=100;
 		std::pair<int,float> *tt = regularize(res,ntop);
-		std::pair<int,float> *ss = readFromFile(ntop,"std.vout");
+		std::pair<int,float> *ss = readFromFile(ntop,(char*)"std.vout");
 		float err = computeError(ss,tt,ntop);
 		std::cout<<"zq:\t" << "err=" << err << std::endl;
 		outputFileName = outputFileDir + "/sa_curr_sorted" + level_str + ".txt";

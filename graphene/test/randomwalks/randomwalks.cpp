@@ -1,3 +1,5 @@
+// random walk with load on demand
+
 #include "cache_driver.h"
 #include "IO_smart_iterator.h"
 #include <stdlib.h>
@@ -12,18 +14,19 @@
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
 #include "outputLog.hpp"
+#include "walk.hpp"
 
 inline bool is_active
 (index_t vert_id,
 sa_t criterion,
-sa_t *sa, sa_t *sa_prev)
+sa_t *sa)
 {
 	if(sa[vert_id]) 
 		return true;
 	// std::cout<<"vert_id: " << vert_id << std::endl;
 	return false;
 }
-//test the git commit -v
+// test the git commit -v
 
 int main(int argc, char **argv) 
 {
@@ -62,8 +65,10 @@ int main(int argc, char **argv)
 	index_t num_steps = (index_t) atol(argv[15]);
 	assert(NUM_THDS==(row_par*col_par*2));
 	
-	sa_t *sa_curr=NULL;
-	sa_t *sa_next=NULL;
+	// sa_t *sa_curr=NULL;
+	// sa_t *sa_next=NULL;
+	sa_t *sa=NULL;
+	WalkManager *walk_manager=new WalkManager(); //wang, 2018.6.11
 	vertex_t **front_queue_ptr;
 	index_t *front_count_ptr;
 	vertex_t *col_ranger_ptr;
@@ -75,16 +80,25 @@ int main(int argc, char **argv)
 			front_count_ptr, beg_dir, beg_header,
 			row_par, col_par);
 	
-	sa_curr=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
+	walk_manager->walk_num=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-	if(sa_curr==MAP_FAILED)
+	if(walk_manager->walk_num==MAP_FAILED)
 	{	
 		perror("mmap");
 		exit(-1);
 	}
 	
-	sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
+	sa=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
+		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
+		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+	if(sa==MAP_FAILED)
+	{	
+		perror("mmap");
+		exit(-1);
+	}
+	
+	/* sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
 	
@@ -92,13 +106,17 @@ int main(int argc, char **argv)
 	{	
 		perror("mmap");
 		exit(-1);
-	}
+	} */
 
 	//init rev_odeg and rank value
+	// for(index_t i=92200;i<92300;i++)
 	for(index_t i=0;i<vert_count;i++)
 	{
-		sa_curr[i]= num_walks;
-		sa_next[i] = 0;
+		sa[i] = 0;
+		walk_manager->walk_num[i] = num_walks;
+		walk_t w = walk_manager->encode(i,0,0);
+		std::vector<walk_t> vec(walk_manager->walk_num[i],w);
+		walk_manager->walks[i]=vec;
 	}
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
@@ -113,14 +131,13 @@ int main(int argc, char **argv)
 	std::cout<<cmd<<"\n";
 	//exit(-1);
 
-	sa_t *sa_dummy;
 	IO_smart_iterator **it_comm = new IO_smart_iterator*[NUM_THDS];
 	
 	srand((unsigned)time(NULL));
 	double tm = 0;
 #pragma omp parallel \
 	num_threads (NUM_THDS) \
-	shared(sa_next,sa_curr,comm)
+	shared(walk_manager,sa,comm) // shared(sa_next,sa_curr,comm)
 	{
 		sa_t level = 0;
 		int tid = omp_get_thread_num();
@@ -150,7 +167,7 @@ int main(int argc, char **argv)
 						beg_header,csr_header,
 						num_chunks,
 						chunk_sz,
-						sa_curr,sa_dummy,beg_pos,
+						walk_manager,beg_pos,
 						num_buffs,
 						ring_vert_count,
 						MAX_USELESS,
@@ -230,7 +247,7 @@ int main(int argc, char **argv)
 					//process one chunk
 					while(true)
 					{
-						if( sa_curr[vert_id] > 0 ) //if there are some walks in the vertex
+						if( walk_manager->walks[vert_id].size() > 0 ) //if there are some walks in the vertex
 						{
 							// get a vertex with beg and end in buff --> vertex_id
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off;
@@ -238,21 +255,34 @@ int main(int argc, char **argv)
 
 							//possibly vert_id starts from preceding data block.
 							//there by beg<0 is possible
-							if(beg<0) beg = 0;
-							if(end>num_verts) end = num_verts;
+							// if(beg<0) beg = 0;
+							// if(end>num_verts) end = num_verts;
 
-							index_t num_walks = (index_t) sa_curr[vert_id];
-
-			                    	for (int i = 0; i < num_walks; i++){
-				                          vertex_t dstId;
-				                          //if there is out-neighbors , with 0.85 random select one
-				                          if (((float)rand())/RAND_MAX > 0.15 && (end>beg)){
-				                           	dstId = pinst->buff[rand() % (end-beg) + beg];
-				                          }else{
-				                                dstId = rand() % vert_count;
-				                          }
-				                          sa_next[dstId]++;
-			                    	}
+							for (int i = 0; i < walk_manager->walks[vert_id].size(); i++){
+								walk_t w = walk_manager->walks[vert_id][i];
+								offset_t nextOff = walk_manager->getNextOff(w);
+								vertex_t dstId;
+								//if there is out-neighbors , with 0.85 random select one
+								// if (((float)rand())/RAND_MAX > 0.15 && nextOff != 0x3ff ){
+								if (((float)rand())/RAND_MAX > 0.15 && nextOff+beg>=0 && nextOff+beg<num_verts ){
+									// assert(nextOff>=0 && nextOff<end-beg);
+									// std::cout << "use : " << vert_id << " " << nextOff << std::endl;
+									dstId = pinst->buff[nextOff + beg];
+								}else{
+									dstId = rand() % vert_count;
+								}
+								// std::cout << vert_id << " -> " << dstId << std::endl;
+								sa[dstId]++;
+								hop_t h = walk_manager->getHop(w)+1;
+								if( h < num_steps ){
+									w = walk_manager->moveWalk(w,h);
+									if(walk_manager->walks.find(dstId)!=walk_manager->walks.end())
+										walk_manager->walks[dstId].push_back(w);
+									else
+										walk_manager->walks[dstId] = std::vector<walk_t>(1,w);
+								}
+							}
+							walk_manager->walks.erase(vert_id);
 						}
 						vert_id++;
 
@@ -286,8 +316,9 @@ finish_point:
 #pragma omp barrier
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
-				sa_curr[vert] = sa_next[vert];
-				sa_next[vert] = 0;
+				// sa_curr[vert] = sa_next[vert];
+				// sa_next[vert] = 0;
+				walk_manager->walk_num[vert]=walk_manager->walks[vert].size();
 			}
 #pragma omp barrier
 			ltm = wtime() - ltm;
@@ -308,7 +339,7 @@ finish_point:
 				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
 				<<total_sz<<"\n";
 
-			if (!tid && level==num_steps) printLog(level, vert_count, sa_curr, beg_dir, true);
+			if (!tid && level==num_steps) printLog(level, vert_count, sa, beg_dir, true);
 			if(level == num_steps) break;
 //			if(tid ==0) printf("%f %f %f %f %f %f %f %f %f\n", it->sa_ptr[121]*odeg_glb[121], it->sa_ptr[27]*odeg_glb[27], it->sa_ptr[52]*odeg_glb[52], it->sa_ptr[49]*odeg_glb[49], it->sa_ptr[95]*odeg_glb[95], it->sa_ptr[1884]*odeg_glb[1884], it->sa_ptr[2]*odeg_glb[2], it->sa_ptr[12]*odeg_glb[12], it->sa_ptr[131]*odeg_glb[131]);
 
@@ -321,8 +352,8 @@ finish_point:
 		if((tid & 1) == 0) delete it;
 		
 	}
-	munmap(sa_next,sizeof(sa_t)*vert_count);
-	munmap(sa_curr,sizeof(sa_t)*vert_count);
+	// munmap(sa_next,sizeof(sa_t)*vert_count);
+	munmap(walk_manager->walk_num,sizeof(sa_t)*vert_count);
 	delete[] comm;
 	return 0;
 }

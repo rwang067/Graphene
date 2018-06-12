@@ -19,7 +19,8 @@ IO_smart_iterator::IO_smart_iterator(
 		const char *csr_header,
 		const index_t num_chunks,
 		const size_t chunk_sz,
-		sa_t * &sa,sa_t* &sa_prev,
+		// sa_t * &sa,sa_t* &sa_prev,
+		WalkManager* &walk_manager,
 		index_t* &beg_pos, 
 		index_t num_buffs,
 		index_t ring_vert_count,
@@ -27,7 +28,7 @@ IO_smart_iterator::IO_smart_iterator(
 		const index_t io_limit,
 		cb_func p_func):
 	IO_smart_iterator(comp_tid, comm, num_rows, num_cols, beg_dir, csr_dir,
-			beg_header, csr_header, num_chunks, chunk_sz, sa, sa_prev, 
+			beg_header, csr_header, num_chunks, chunk_sz, walk_manager, 
 			beg_pos, MAX_USELESS, io_limit, p_func)
 {
 	//reqt_list
@@ -86,7 +87,7 @@ IO_smart_iterator::IO_smart_iterator(
 	//allocate cache driver
 	cd = new cache_driver(
 			fd_csr, 
-			reqt_blk_bitmap,
+			reqt_blk_walkmap,
 			reqt_list,
 			&reqt_blk_count,
 			total_blks,
@@ -111,7 +112,8 @@ IO_smart_iterator::IO_smart_iterator(
 		const char *csr_header,
 		const index_t num_chunks,
 		const size_t chunk_sz,
-		sa_t * &sa,sa_t* &sa_prev,
+		// sa_t * &sa,sa_t* &sa_prev,
+		WalkManager* &walk_manager,
 		index_t* &beg_pos, 
 		index_t num_buffs,
 		index_t ring_vert_count,
@@ -119,7 +121,7 @@ IO_smart_iterator::IO_smart_iterator(
 		const index_t io_limit,
 		cb_func p_func):
 	IO_smart_iterator(comp_tid, comm, num_rows, num_cols, beg_dir, csr_dir,
-			beg_header, csr_header, num_chunks, chunk_sz, sa, sa_prev, 
+			beg_header, csr_header, num_chunks, chunk_sz, walk_manager,
 			beg_pos, MAX_USELESS, io_limit, p_func)
 {
 	//reqt_list
@@ -175,7 +177,7 @@ IO_smart_iterator::IO_smart_iterator(
 	//allocate cache driver
 	cd = new cache_driver(
 			fd_csr, 
-			reqt_blk_bitmap,
+			reqt_blk_walkmap,
 			reqt_list,
 			&reqt_blk_count,
 			total_blks,
@@ -198,13 +200,14 @@ IO_smart_iterator::IO_smart_iterator(
 		const char *csr_header,
 		const index_t num_chunks,
 		const size_t chunk_sz,
-		sa_t * &sa,sa_t* &sa_prev,
+		// sa_t * &sa,sa_t* &sa_prev,
+		WalkManager* &walk_manager,
 		index_t* &beg_pos, 
 		index_t MAX_USELESS,
 		const index_t io_limit,
 		cb_func p_func):
 		num_rows(num_rows),num_cols(num_cols),comp_tid(comp_tid),
-		sa_ptr(sa),sa_prev(sa_prev),sort_criterion(sort_criterion),
+		walk_manager(walk_manager),sort_criterion(sort_criterion),
 		semaphore_acq(semaphore_acq),semaphore_flag(semaphore_flag)
 {
 	#ifdef TIMING
@@ -305,12 +308,15 @@ IO_smart_iterator::IO_smart_iterator(
 	if(total_blks & (VERT_PER_BLK-1)) ++total_blks;
 
 	//add 64 more bits, in order for quick bitmap scan.
-	reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
+	// reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
+	// 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
+	// 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+	reqt_blk_walkmap=(bit_t *)mmap(NULL,(total_blks+1) * sizeof(bit_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-	if(reqt_blk_bitmap == MAP_FAILED)
+	if(reqt_blk_walkmap == MAP_FAILED)
 	{
-		perror("reqt_blk_bitmap mmap");
+		perror("reqt_blk_walkmap mmap");
 		exit(-1);
 	}
 	
@@ -323,7 +329,8 @@ IO_smart_iterator::IO_smart_iterator(
 		perror("blk_beg_vert mmap");
 		exit(-1);
 	}
-	memset(reqt_blk_bitmap, 0, ((total_blks>>3)+1) * sizeof(bit_t));
+	// memset(reqt_blk_bitmap, 0, ((total_blks>>3)+1) * sizeof(bit_t));
+	memset(reqt_blk_walkmap, 0, (total_blks+1) * sizeof(bit_t));
 	memset(blk_beg_vert, 0, total_blks * sizeof(vertex_t));
 
 
@@ -344,7 +351,8 @@ IO_smart_iterator::IO_smart_iterator(
 IO_smart_iterator::~IO_smart_iterator()
 {
 	delete cd;
-	munmap(reqt_blk_bitmap, ((total_blks>>3)+1) * sizeof(bit_t));
+	// munmap(reqt_blk_bitmap, ((total_blks>>3)+1) * sizeof(bit_t));
+	munmap(reqt_blk_walkmap, (total_blks+1) * sizeof(bit_t));
 	munmap(blk_beg_vert, sizeof(vertex_t) * total_blks);
 	munmap(beg_pos_ptr, sizeof(index_t)*(row_ranger_end - row_ranger_beg + 1));
 }
@@ -363,6 +371,37 @@ void IO_smart_iterator::priority_queue(int *acq_seq, int *seq_flag)
 	seq_flag[0]++;
 }
 
+void IO_smart_iterator::req_vertex(index_t vert){
+	//random select a neighbor for each walk
+	
+	index_t beg = beg_pos_ptr[vert - row_ranger_beg];
+	index_t end = beg_pos_ptr[vert+1 - row_ranger_beg];
+	index_t len = end - beg;
+
+	// do the random chices here
+	/* if( walk_manager->walks[vert].size() != walk_manager->walk_num[vert] )
+		std::cout << vert << " " << walk_manager->walk_num[vert] << " " << walk_manager->walks[vert].size()<< std::endl;
+	else
+		std::cout << vert << " " << walk_manager->walk_num[vert] << std::endl; */
+	if( len > 0 )
+		for(sa_t j=0; j<walk_manager->walks[vert].size(); j++)
+		{
+			offset_t dst_off = rand()%len;
+			index_t dst_blk = (dst_off+beg)/VERT_PER_BLK;
+			if(reqt_blk_walkmap[dst_blk] == 0)
+				++reqt_blk_count;
+			reqt_blk_walkmap[dst_blk]++;
+			//dstId = buff[dst_off]; --> to be load
+			//sa_ptr[dstId]++;
+			// std::cout << "load : " << vert << " " << dst_off << " " << dst_blk << std::endl;
+			walk_manager->walks[vert][j] = walk_manager->setNextOff(walk_manager->walks[vert][j],dst_off);
+		}
+	else
+		for(index_t j=0; j<walk_manager->walks[vert].size(); j++)
+			walk_manager->walks[vert][j] = walk_manager->setNextOff(walk_manager->walks[vert][j],0x3ff);
+
+}
+
 
 //-Translate frontiers to requested data blks
 void IO_smart_iterator::req_translator(sa_t criterion)
@@ -371,28 +410,8 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 	//since all requests are satisfied.
 	reqt_blk_count = 0;
 	for(index_t i = row_ranger_beg; i < row_ranger_end; i++)
-//	for(index_t i = col_ranger_beg; i < col_ranger_end; i++)
-		if((*is_active)(i,criterion,sa_ptr, sa_prev))
-		{
-			index_t beg = beg_pos_ptr[i - row_ranger_beg];
-			index_t end = beg_pos_ptr[i+1 - row_ranger_beg];
-
-			//one frontier's neighbor may span 
-			//-across multiple chunks
-			index_t beg_blk_ptr = beg/VERT_PER_BLK;
-			index_t end_blk_ptr = end/VERT_PER_BLK;
-
-			if(end & (VERT_PER_BLK-1)) ++end_blk_ptr;
-			for(index_t j=beg_blk_ptr; j<end_blk_ptr; ++j)
-			{
-				//assuming it is using bit_t
-				if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
-				{
-					++reqt_blk_count;
-					reqt_blk_bitmap[j>>3] |= (1<<(j&7));
-				}
-			}
-		}
+		if((*is_active)(i,criterion,walk_manager->walk_num))
+			req_vertex(i);
 	
 	//means we start a new iteration
 	//we should do some IO-conserving work in next()
@@ -464,25 +483,7 @@ void IO_smart_iterator::req_translator_queue()
 				{
 					vertex_t i = front_queue[row_ptr * num_cols + col_ptr][m];
 					if(i < row_ranger_beg || i >= row_ranger_end) continue;
-
-					index_t beg = beg_pos_ptr[i - row_ranger_beg];
-					index_t end = beg_pos_ptr[i+1 - row_ranger_beg];
-
-					//one frontier's neighbor may span 
-					//-across multiple chunks
-					index_t beg_blk_ptr = beg/VERT_PER_BLK;
-					index_t end_blk_ptr = end/VERT_PER_BLK;
-
-					if(end & (VERT_PER_BLK-1)) ++end_blk_ptr;
-					for(index_t j=beg_blk_ptr; j<end_blk_ptr; ++j)
-					{
-						//assuming it is using bit_t
-						if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
-						{
-							++reqt_blk_count;
-							reqt_blk_bitmap[j>>3] |= (1<<(j&7));
-						}
-					}
+					req_vertex(i);
 				}
 			}
 		}
@@ -563,11 +564,16 @@ void IO_smart_iterator::read_trace_to_bitmap(char *trace_file)
 		int64_t blk_id = blk_list[i];
 		if(blk_id >= total_blks) continue;
 
-		if((reqt_blk_bitmap[blk_id>>3] & (1<<(blk_id&7))) == 0)
+		// if((reqt_blk_bitmap[blk_id>>3] & (1<<(blk_id&7))) == 0)
+		// {
+		// 	++reqt_blk_count;
+		// 	reqt_blk_bitmap[blk_id>>3] |= (1<<(blk_id&7));
+		// }
+		if(reqt_blk_walkmap[blk_id] == 0)
 		{
 			++reqt_blk_count;
-			reqt_blk_bitmap[blk_id>>3] |= (1<<(blk_id&7));
 		}
+		reqt_blk_walkmap[blk_id]++;
 	}
 	tm=wtime() -tm;
 
@@ -889,7 +895,7 @@ void IO_smart_iterator::load_kv_sa(sa_t criterion)
 				//process one chunk
 				while(true)
 				{
-					if((*is_active)(vert_id,criterion,sa_ptr, sa_prev))
+					if((*is_active)(vert_id,criterion,walk_manager->walk_num))
 					{
 						index_t beg = beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off;
 						index_t end = beg+beg_pos_ptr[vert_id+1-row_ranger_beg]- 
@@ -901,7 +907,7 @@ void IO_smart_iterator::load_kv_sa(sa_t criterion)
 
 						if(end>num_verts) end = num_verts;
 
-						sa_t sa_src = sa_ptr[vert_id];
+						sa_t sa_src = walk_manager->walk_num[vert_id];
 						for( ;beg<end; ++beg)
 						{
 							//assert(pinst->buff[beg]<1262485504);
@@ -987,7 +993,7 @@ void IO_smart_iterator::load_kv_vert(sa_t criterion)
 				//process one chunk
 				while(true)
 				{
-					if((*is_active)(vert_id,criterion,sa_ptr, sa_prev))
+					if((*is_active)(vert_id,criterion,walk_manager->walk_num))
 					{
 						index_t beg = beg_pos_ptr[vert_id-row_ranger_beg]-blk_beg_off;
 						index_t end = beg+beg_pos_ptr[vert_id+1-row_ranger_beg]- 
