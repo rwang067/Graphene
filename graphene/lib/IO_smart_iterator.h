@@ -48,7 +48,8 @@ class IO_smart_iterator
 
 		//for IO loading
 		index_t total_blks;
-		bit_t *reqt_blk_bitmap;
+		// bit_t *reqt_blk_bitmap;
+		bit_t *reqt_blk_walkmap;
 		vertex_t *blk_beg_vert;
 		index_t vert_per_chunk;
 		index_t reqt_blk_count; // number of request to be issued

@@ -86,7 +86,8 @@ IO_smart_iterator::IO_smart_iterator(
 	//allocate cache driver
 	cd = new cache_driver(
 			fd_csr, 
-			reqt_blk_bitmap,
+			// reqt_blk_bitmap,
+			reqt_blk_walkmap,
 			reqt_list,
 			&reqt_blk_count,
 			total_blks,
@@ -175,7 +176,8 @@ IO_smart_iterator::IO_smart_iterator(
 	//allocate cache driver
 	cd = new cache_driver(
 			fd_csr, 
-			reqt_blk_bitmap,
+			// reqt_blk_bitmap,
+			reqt_blk_walkmap,
 			reqt_list,
 			&reqt_blk_count,
 			total_blks,
@@ -305,12 +307,21 @@ IO_smart_iterator::IO_smart_iterator(
 	if(total_blks & (VERT_PER_BLK-1)) ++total_blks;
 
 	//add 64 more bits, in order for quick bitmap scan.
-	reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
+	/* reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
 	if(reqt_blk_bitmap == MAP_FAILED)
 	{
 		perror("reqt_blk_bitmap mmap");
+		exit(-1);
+	} */
+	//add 64 more bits, in order for quick bitmap scan.
+	reqt_blk_walkmap=(bit_t *)mmap(NULL,(total_blks+8) * sizeof(bit_t),
+			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
+			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+	if(reqt_blk_walkmap == MAP_FAILED)
+	{
+		perror("reqt_blk_walkmap mmap");
 		exit(-1);
 	}
 	
@@ -323,7 +334,8 @@ IO_smart_iterator::IO_smart_iterator(
 		perror("blk_beg_vert mmap");
 		exit(-1);
 	}
-	memset(reqt_blk_bitmap, 0, ((total_blks>>3)+1) * sizeof(bit_t));
+	// memset(reqt_blk_bitmap, 0, ((total_blks>>3)+1) * sizeof(bit_t));
+	memset(reqt_blk_walkmap, 0, (total_blks+1) * sizeof(bit_t));
 	memset(blk_beg_vert, 0, total_blks * sizeof(vertex_t));
 
 
@@ -344,7 +356,8 @@ IO_smart_iterator::IO_smart_iterator(
 IO_smart_iterator::~IO_smart_iterator()
 {
 	delete cd;
-	munmap(reqt_blk_bitmap, ((total_blks>>3)+1) * sizeof(bit_t));
+	// munmap(reqt_blk_bitmap, ((total_blks>>3)+1) * sizeof(bit_t));
+	munmap(reqt_blk_walkmap, (total_blks+1) * sizeof(bit_t));
 	munmap(blk_beg_vert, sizeof(vertex_t) * total_blks);
 	munmap(beg_pos_ptr, sizeof(index_t)*(row_ranger_end - row_ranger_beg + 1));
 }
@@ -386,11 +399,16 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 			for(index_t j=beg_blk_ptr; j<end_blk_ptr; ++j)
 			{
 				//assuming it is using bit_t
-				if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
+				/* if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
 				{
 					++reqt_blk_count;
 					reqt_blk_bitmap[j>>3] |= (1<<(j&7));
+				} */
+				if(reqt_blk_walkmap[j] == 0)
+				{
+					++reqt_blk_count;
 				}
+				reqt_blk_walkmap[j]++;
 			}
 		}
 	
@@ -477,11 +495,16 @@ void IO_smart_iterator::req_translator_queue()
 					for(index_t j=beg_blk_ptr; j<end_blk_ptr; ++j)
 					{
 						//assuming it is using bit_t
-						if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
+						/* if((reqt_blk_bitmap[j>>3] & (1<<(j&7))) == 0)
 						{
 							++reqt_blk_count;
 							reqt_blk_bitmap[j>>3] |= (1<<(j&7));
+						} */
+						if(reqt_blk_walkmap[j] == 0)
+						{
+							++reqt_blk_count;
 						}
+						reqt_blk_walkmap[j]++;
 					}
 				}
 			}
@@ -563,11 +586,16 @@ void IO_smart_iterator::read_trace_to_bitmap(char *trace_file)
 		int64_t blk_id = blk_list[i];
 		if(blk_id >= total_blks) continue;
 
-		if((reqt_blk_bitmap[blk_id>>3] & (1<<(blk_id&7))) == 0)
+		/* if((reqt_blk_bitmap[blk_id>>3] & (1<<(blk_id&7))) == 0)
 		{
 			++reqt_blk_count;
 			reqt_blk_bitmap[blk_id>>3] |= (1<<(blk_id&7));
+		} */
+		if(reqt_blk_walkmap[blk_id] == 0)
+		{
+			++reqt_blk_count;
 		}
+		reqt_blk_walkmap[blk_id]++;
 	}
 	tm=wtime() -tm;
 
