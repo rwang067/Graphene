@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 		if(tid==0) std::cout<<"Start random walks ... \n";	
 		while(true)
 		{
-			std::cout<<"Start running level " << level << std::endl;
+			if(!tid) std::cout<<"Start running level " << level << std::endl;
 			//- Framework gives user block to process
 			//- Figures out what blocks needed next level
 			if((tid & 1) == 0)
@@ -314,11 +314,13 @@ int main(int argc, char **argv)
 finish_point:
 			++level;
 #pragma omp barrier
+			sa_t walksum = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
 				// sa_curr[vert] = sa_next[vert];
 				// sa_next[vert] = 0;
 				walk_manager->walk_num[vert]=walk_manager->walks[vert].size();
+				walksum += walk_manager->walk_num[vert];
 			}
 #pragma omp barrier
 			ltm = wtime() - ltm;
@@ -332,15 +334,17 @@ finish_point:
 				total_sz += comm[i];
 			total_sz >>= 1;//total size doubled
 			
-			if(!tid) std::cout<<"@level-"<<(int)level
+			/* if(!tid) std::cout<<"@level-"<<(int)level
 				<<"-font-leveltime-converttm-iotm-waitiotm-waitcomptm-iosize: "
 				<<front_count<<" "<<ltm<<" "<<convert_tm<<" "<<it->io_time
 				<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
 				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
-				<<total_sz<<"\n";
+				<<total_sz<<"\n"; */
 
-			if (!tid && level==num_steps) printLog(level, vert_count, sa, beg_dir, true);
-			if(level == num_steps) break;
+			// if (!tid && level==num_steps) printLog(level, vert_count, sa, beg_dir, true);
+			// if(level == num_steps) break;
+			if(!tid) std::cout << "walk sum : " << walksum << std::endl;
+			if(walksum == 0) break;
 //			if(tid ==0) printf("%f %f %f %f %f %f %f %f %f\n", it->sa_ptr[121]*odeg_glb[121], it->sa_ptr[27]*odeg_glb[27], it->sa_ptr[52]*odeg_glb[52], it->sa_ptr[49]*odeg_glb[49], it->sa_ptr[95]*odeg_glb[95], it->sa_ptr[1884]*odeg_glb[1884], it->sa_ptr[2]*odeg_glb[2], it->sa_ptr[12]*odeg_glb[12], it->sa_ptr[131]*odeg_glb[131]);
 
 		}
