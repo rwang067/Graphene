@@ -252,6 +252,7 @@ void cache_driver::load_chunk()
 	}
 	// if( *reqt_blk_count != 0 )
 	// 	std::cout << "*reqt_blk_count , total_blk " << *reqt_blk_count << "\t 539014"  << std::endl;
+	// vertex_t cur_vert = 0;
 	while((load_blk_off<total_blks) && (*reqt_blk_count != 0))
 	{
 		//find a to-be-load block
@@ -277,6 +278,7 @@ void cache_driver::load_chunk()
 			cache[chunk_id]->status = LOADING;
 			index_t beg_blk_id = load_blk_off;
 			cache[chunk_id]->beg_vert= blk_beg_vert[beg_blk_id];
+			// cache[chunk_id]->beg_vert= cur_vert > blk_beg_vert[beg_blk_id]? cur_vert : blk_beg_vert[beg_blk_id];
 			cache[chunk_id]->blk_beg_off=VERT_PER_BLK * beg_blk_id;
 			cache[chunk_id]->load_sz = VERT_PER_BLK;
 			
@@ -291,7 +293,12 @@ void cache_driver::load_chunk()
 			while(load_blk_off<total_blks)
 			{
 				++load_blk_off;
-				if(load_blk_off+1-beg_blk_id>blk_per_chunk) break;
+				if(load_blk_off+1-beg_blk_id > blk_per_chunk){
+					--load_blk_off;
+					reqt_blk_bitmap[(load_blk_off)>>3] |= (1<<(load_blk_off&7));
+					++(*reqt_blk_count);
+					break;
+				} 
 				
 				if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
 				{
