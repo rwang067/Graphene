@@ -225,7 +225,8 @@ int main(int argc, char **argv)
 					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
 
-					// std::cout  << "chunk_id=" << chunk_id << "\t" << "beg_vert=" << pinst->beg_vert << "\t" << "blk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
+					// if(level==0)
+						// std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
 
 					//process one chunk
 					while(true)
@@ -238,8 +239,15 @@ int main(int argc, char **argv)
 
 							//possibly vert_id starts from preceding data block.
 							//there by beg<0 is possible
-							if(beg<0) beg = 0;
-							if(end>num_verts) end = num_verts;
+							// if(beg<0) beg = 0;
+							// if(end>num_verts) end = num_verts;
+							if(beg<0){
+								vert_id++;
+								continue;
+							}
+							if(end>num_verts) break;
+							// if(vert_id>164430 && vert_id<164450) 
+							// 	std::cout << vert_id << "\t" << beg << "\t" << end << "\t" << sa_curr[vert_id] <<std::endl;
 
 							index_t num_walks = (index_t) sa_curr[vert_id];
 
@@ -249,9 +257,10 @@ int main(int argc, char **argv)
 				                          if (((float)rand())/RAND_MAX > 0.15 && (end>beg)){
 				                           	dstId = pinst->buff[rand() % (end-beg) + beg];
 				                          }else{
-				                                dstId = rand() % vert_count;
+											dstId = rand() % vert_count;
 				                          }
 				                          sa_next[dstId]++;
+										  sa_curr[vert_id]--;
 			                    	}
 						}
 						vert_id++;
