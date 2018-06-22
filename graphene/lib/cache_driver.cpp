@@ -301,7 +301,7 @@ void cache_driver::load_chunk()
 				++load_blk_off;
 				if(load_blk_off+1-beg_blk_id > blk_per_chunk){
 					--load_blk_off;
-					reqt_blk_bitmap[(load_blk_off)>>3] |= (1<<(load_blk_off&7));
+					reqt_blk_walkmap[load_blk_off]=0xff;///set as the max value to ensure being loaded
 					++(*reqt_blk_count);
 					break;
 				} 
