@@ -217,6 +217,7 @@ IO_smart_iterator::IO_smart_iterator(
 	success_sort=0;
 	sort_req=0;
 	io_time = 0;
+	comp_time = 0;
 	wait_io_time = 0;
 	wait_comp_time = 0;
 
@@ -709,6 +710,7 @@ void IO_smart_iterator::load_key(sa_t criterion)
 		//std::cout<<omp_get_thread_num()<<"-done\n";
 		is_bsp_done = true;
 	}
+	this->io_time += (wtime() - blk_tm);
 	return;
 }
 

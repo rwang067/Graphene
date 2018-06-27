@@ -55,6 +55,7 @@ class IO_smart_iterator
 		index_t VERT_PER_BLK;
 		index_t *reqt_list;
 		double io_time;
+		double comp_time;
 		double wait_io_time;
 		double wait_comp_time;
 
