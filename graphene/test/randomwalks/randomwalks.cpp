@@ -191,6 +191,7 @@ int main(int argc, char **argv)
 			if((tid & 1) == 0)
 			{
 				it -> io_time = 0;
+				it -> comp_time = 0;
 				it -> wait_io_time = 0;
 				it -> wait_comp_time = 0;
 				it -> cd -> io_submit_time = 0;
@@ -218,8 +219,10 @@ int main(int argc, char **argv)
 			}
 #pragma omp barrier
 
+			double process_tm = 0;
 			if((tid & 1) == 0)
 			{ int s, e ; s = e = 0;
+				double beg_tm = wtime();
 				while(true)
 				{	
 					int chunk_id = -1;
@@ -245,6 +248,7 @@ int main(int argc, char **argv)
 					// std::cout  << "chunk_id=" << chunk_id << "\t" << "beg_vert=" << pinst->beg_vert << "\t" << "blk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
 
 					//process one chunk
+					double pro_tm = wtime();
 					while(true)
 					{
 						if( walk_manager->walks[vert_id].size() > 0 ) //if there are some walks in the vertex
@@ -293,6 +297,7 @@ int main(int argc, char **argv)
 							// std::cout  << "chunk_id=" << chunk_id << "\t" << pinst->beg_vert << "\t" <<  vert_id-1 << "\t" << e++ <<  std::endl;
 							break;}
 					}
+					process_tm += (wtime() - pro_tm);
 
 					pinst->status = EVICTED;
 					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
@@ -300,6 +305,7 @@ int main(int argc, char **argv)
 
 				}
 				it->front_count[comp_tid] = front_count;
+				it->comp_time += (wtime() - beg_tm); 
 			}
 			else
 			{
@@ -340,6 +346,13 @@ finish_point:
 				<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
 				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
 				<<total_sz<<"\n"; */
+
+			if(!tid){
+				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
+				std::cout<<"\tconvert_tm:"<<convert_tm<<"\n";
+				std::cout<<"\ttid=0 (Compute Thread)--comp_time:"<<it->comp_time<<"-wait_io_time:"<<it->wait_io_time<<"-process_time:"<<process_tm<<"\n";
+				std::cout<<"\ttid=1 (IO Thread)--io_time:"<<it->io_time<<"-io_submit_time:"<<it->cd->io_submit_time<<"-io_poll_time:"<<it->cd->io_poll_time<<"-wait_comp_time:"<<it->wait_comp_time<<"\n";
+			}
 
 			// if (!tid && level==num_steps) printLog(level, vert_count, sa, beg_dir, true);
 			// if(level == num_steps) break;
