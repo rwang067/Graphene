@@ -47,6 +47,7 @@ struct chunk
 {
 	int status;//- define the chunks status. as EVICTED, LOADING ... 
 	vertex_t beg_vert;//first vert whose neighbors 
+	// vertex_t end_vert; //last vert whose neighbors are all in this chunk
 												//- are stored in this chunk 
 	index_t blk_beg_off;//the begin pos of this block
 	vertex_t *buff;//buffer for loading data

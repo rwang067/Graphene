@@ -245,7 +245,8 @@ int main(int argc, char **argv)
 					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
 
-					// std::cout  << "chunk_id=" << chunk_id << "\t" << "beg_vert=" << pinst->beg_vert << "\t" << "blk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
+					if(level==0&&s<5)
+						std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
 
 					//process one chunk
 					double pro_tm = wtime();
@@ -257,25 +258,41 @@ int main(int argc, char **argv)
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off;
 							index_t end = beg_pos[vert_id + 1 - it->row_ranger_beg] - blk_beg_off;
 
+							if(vert_id>85 && vert_id<90)
+								std::cout << vert_id << "\t" << beg << "\t" << end << std::endl;
+
 							//possibly vert_id starts from preceding data block.
 							//there by beg<0 is possible
 							// if(beg<0) beg = 0;
 							// if(end>num_verts) end = num_verts;
 
+
+							if(beg<0){
+								// std::cout << vert_id << " beg<0 : " << walk_manager->walks[vert_id].size() << std::endl;
+								vert_id++;
+								continue;
+							}
+							if(end>num_verts) break;
+
 							for (int i = 0; i < walk_manager->walks[vert_id].size(); i++){
 								walk_t w = walk_manager->walks[vert_id][i];
 								offset_t nextOff = walk_manager->getNextOff(w);
+								// if(!(nextOff>=0 && nextOff<=end-beg)){
+								// 	std::cout << nextOff <<" " << beg << " " << end << std::endl;
+								// 	continue;
+								// }
+
+
+
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
-								// if (((float)rand())/RAND_MAX > 0.15 && nextOff != 0x3ff ){
-								if (((float)rand())/RAND_MAX > 0.15 && nextOff+beg>=0 && nextOff+beg<num_verts ){
-									// assert(nextOff>=0 && nextOff<end-beg);
+								if (((float)rand())/RAND_MAX > 0.15 && nextOff != 0x3ff){
+									assert(nextOff>=0 && nextOff<=end-beg);
 									// std::cout << "use : " << vert_id << " " << nextOff << std::endl;
 									dstId = pinst->buff[nextOff + beg];
 								}else{
 									dstId = rand() % vert_count;
 								}
-								// std::cout << vert_id << " -> " << dstId << std::endl;
 								sa[dstId]++;
 								hop_t h = walk_manager->getHop(w)+1;
 								if( h < num_steps ){
@@ -285,6 +302,9 @@ int main(int argc, char **argv)
 									else
 										walk_manager->walks[dstId] = std::vector<walk_t>(1,w);
 								}
+								// if(level>4){
+								// 	std::cout << vert_id << "-->" << dstId << " \t h=" << h << std::endl;
+								// }
 							}
 							walk_manager->walks.erase(vert_id);
 						}
@@ -320,6 +340,7 @@ int main(int argc, char **argv)
 finish_point:
 			++level;
 #pragma omp barrier
+			double ftm=wtime();
 			sa_t walksum = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
@@ -327,7 +348,11 @@ finish_point:
 				// sa_next[vert] = 0;
 				walk_manager->walk_num[vert]=walk_manager->walks[vert].size();
 				walksum += walk_manager->walk_num[vert];
+				// if(level>4 && walk_manager->walks[vert].size()>0){
+				// 	std::cout << vert << ": " << walk_manager->walks[vert].size() << std::endl;
+				// }
 			}
+			double finish_tm = wtime() - ftm;
 #pragma omp barrier
 			ltm = wtime() - ltm;
 
@@ -349,7 +374,7 @@ finish_point:
 
 			if(!tid){
 				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
-				std::cout<<"\tconvert_tm:"<<convert_tm<<"\n";
+				std::cout<<"\tconvert_tm:"<<convert_tm<<"\tfinish_tm:"<<finish_tm<<"\n";
 				std::cout<<"\ttid=0 (Compute Thread)--comp_time:"<<it->comp_time<<"-wait_io_time:"<<it->wait_io_time<<"-process_time:"<<process_tm<<"\n";
 				std::cout<<"\ttid=1 (IO Thread)--io_time:"<<it->io_time<<"-io_submit_time:"<<it->cd->io_submit_time<<"-io_poll_time:"<<it->cd->io_poll_time<<"-wait_comp_time:"<<it->wait_comp_time<<"\n";
 			}
