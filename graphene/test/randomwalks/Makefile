@@ -18,9 +18,10 @@ ifeq ($(profile),1)
 	cuflags+=-DPROFILE
 	flags+=-DPROFILE
 endif
+
 objs = $(patsubst %.cpp,%.o,$(wildcard ../../lib/*.cpp)) \
-			$(patsubst %.cu,%.o,$(wildcard ../../lib/*.cu)) \
-			$(patsubst %.cpp,%.o,$(wildcard *.cpp))
+		$(patsubst %.cu,%.o,$(wildcard ../../lib/*.cu)) \
+		$(patsubst %.cpp,%.o,$(wildcard $@.cpp))
 
 deps =	$(wildcard ../../lib/*.h) \
 				$(wildcard ../../lib/*.cuh) \
@@ -30,17 +31,28 @@ deps =	$(wildcard ../../lib/*.h) \
 
 #flags+=-L$(shell dirname $(cucc))/../lib64 -lcuda -lcudart
 
+apps: apps/personalizedpagerank apps/pagerank
+
+apps/% : apps/%.o $(objs) 
+	$(cc) $(objs) -o $@ $(flags)
+
 %.o:%.cpp $(deps)
 	$(cc) -c $< -o $@ $(flags)
 
-%.o:%.cu $(deps)
-	$(cucc) -c $< -o $@ $(cuflags)
+# %.o:%.cpp $(deps)
+# 	$(cc) -c $< -o $@ $(flags)
 
-$(exe):$(objs)
-	$(cc) $(objs) -o $(exe) $(flags)
+# %.o:%.cu $(deps)
+# 	$(cucc) -c $< -o $@ $(cuflags)
 
-test:$(exe)
+# $(exe):$(objs)
+# 	$(cc) $(objs) -o $(exe) $(flags)
+
+testp:apps/pagerank
 	./aio_randomwalks.bin 1 1 2 ../../../converter/LJ ../../../converter/LJ soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 1 2
 
 clean:
 	rm -rf $(exe) $(objs) 
+	rm -rf *.bin
+	rm -rf *.log
+

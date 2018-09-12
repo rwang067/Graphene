@@ -60,7 +60,7 @@ class IO_smart_iterator
 		double wait_comp_time;
 
 		//for user layer
-		sa_t my_level;
+		unsigned my_level;
 		bool io_conserve;
 		sa_t *sa_ptr;
 		sa_t *sa_prev;

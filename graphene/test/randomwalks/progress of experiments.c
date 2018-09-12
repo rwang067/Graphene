@@ -1,5 +1,32 @@
 progress of experiments:
 
+2018.8.26
+预处理：
+	cd ** /Graphene-master/convert/
+	./split_rename.bash /home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data 200
+	./tuple_to_bin.multithread/text_to_bin.bin /home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data-split 201 4 1 (需先编译， 1代表完成后删除中间文件)
+	./multi_bin_to_2d_csr/multi_bin_to_2d_csr.bin /home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data-split 201 1 1 4
+	cd /home/wang/Documents/DataSet/Wikipedia/
+	rm -f wikipedia_sorted.data-split-00*
+	mkdir wikipedia_sorted.data_Graphene
+	mkdir wikipedia_sorted.data_Graphene/row_0_col_0
+	mv wikipedia_sorted.data-split* wikipedia_sorted.data_Graphene/row_0_col_0/wikipedia_sorted.data-split*
+运行：
+	./apps/pagerank 1 1 2 '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene' '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene/' wikipedia_sorted.data-split_beg wikipedia_sorted.data-split_csr 8 2097152 4 32 16 128 1 2 
+	error:
+	./apps/pagerank: ../../lib/IO_smart_iterator.cpp:40: IO_smart_iterator::IO_smart_iterator(bool, vertex_t**&, index_t*&, vertex_t*&, int, index_t*, int, int, const char*, const char*, const char*, const char*, index_t, size_t, sa_t*&, sa_t*&, index_t*&, index_t, index_t, index_t, index_t, cb_func): Assertion 'reqt_list != MAP_FAILED' failed.
+	Aborted (core dumped)
+
+	gdb ./apps/pagerank
+	set args 1 1 2 '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene' '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene/' wikipedia_sorted.data-split_beg wikipedia_sorted.data-split_csr 8 20971520 4 32 16 128 1 2 
+
+	
+	./apps/pagerank 1 1 2 '/home/wang/Documents/DataSet/LiveJournal/soc-LiveJournal1.txt_Graphene' '/home/wang/Documents/DataSet/LiveJournal/soc-LiveJournal1.txt_Graphene/' soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 1 2
+ 
+ fatal error: libaio.h: No such file or directory
+	sudo apt-get install libaio-dev
+
+
 2018.4.20 : new randomwalks 
 	 problem ： as for the memmap:can not allocate memory problem:
 	 solution :     sudo su 
@@ -19,7 +46,6 @@ progress of experiments:
 	      						load_chunk();
 	      					}
 
-
 2018.5.28 - 2018.5.31 : gdb调试graphene
 1、终端命令 (跑N×1*6的random walks)：
      -> cd  ** /Graphene-master/graphene/test/randomwalks
@@ -36,7 +62,7 @@ progress of experiments:
 	-- beg_header = soc-LiveJournal1.txt-split_beg
 	-- csr_header = soc-LiveJournal1.txt-split_csr
 	-- num_chunks = 8
-	-- chunk_sz (#bytes) = 20971520    (20M)
+	-- chunk_sz (#bytes) = 2097152    (2M)
 	-- concurr_IO_ctx = 4 = io_limit
 	-- max_continuous_useless_blk = 32 = MAX_USELESS
 	-- ring_vert_count = 16

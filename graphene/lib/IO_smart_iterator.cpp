@@ -31,8 +31,10 @@ IO_smart_iterator::IO_smart_iterator(
 			beg_pos, MAX_USELESS, io_limit, p_func)
 {
 	//reqt_list
-	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
-	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
+	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
+	std::cout << "total_blks = " << total_blks << std::endl;
+	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks,
+	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);	
 	

@@ -62,6 +62,7 @@ cache_driver::cache_driver(
 		
 	//using a big buffer for all chunks
 	buff=NULL;
+	std::cout << "chunk_sz*num_chunks : " << chunk_sz<< " " << num_chunks << " " << chunk_sz*num_chunks << std::endl;
 	buff=(vertex_t *)mmap(NULL,chunk_sz*num_chunks,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
@@ -293,12 +294,7 @@ void cache_driver::load_chunk()
 			while(load_blk_off<total_blks)
 			{
 				++load_blk_off;
-				if(load_blk_off+1-beg_blk_id > blk_per_chunk){
-					--load_blk_off;
-					reqt_blk_bitmap[(load_blk_off)>>3] |= (1<<(load_blk_off&7));
-					++(*reqt_blk_count);
-					break;
-				} 
+				if(load_blk_off+1-beg_blk_id > blk_per_chunk) break;
 				
 				if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
 				{
