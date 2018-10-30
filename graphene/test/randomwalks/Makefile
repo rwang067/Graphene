@@ -30,11 +30,11 @@ deps =	$(wildcard ../../lib/*.h) \
 				Makefile
 
 #flags+=-L$(shell dirname $(cucc))/../lib64 -lcuda -lcudart
-
-apps: apps/personalizedpagerank apps/pagerank
+apps: apps/pagerank apps/rwdomination apps/graphlet apps/personalizedpagerank apps/simrank apps/reachability 
 
 apps/% : apps/%.o $(objs) 
-	$(cc) $(objs) -o $@ $(flags)
+	@mkdir -p bin/$(@D)
+	$(cc) $(objs) -o bin/$@ $(flags)
 
 %.o:%.cpp $(deps)
 	$(cc) -c $< -o $@ $(flags)
@@ -52,7 +52,5 @@ testp:apps/pagerank
 	./aio_randomwalks.bin 1 1 2 ../../../converter/LJ ../../../converter/LJ soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 1 2
 
 clean:
-	rm -rf $(exe) $(objs) 
-	rm -rf *.bin
-	rm -rf *.log
+	@rm -rf bin/*
 

@@ -1,1 +1,104 @@
 14.2914
+32.1476
+22.4083
+8.37264
+65.0114
+26.5784
+26.6452
+9.23647
+18.7661
+19.2298
+17.5662
+174.497
+241.348
+27.3068
+25.393
+2018.9.14 compare with Graphene 
+app = PageRank, dataset = LiveJournal from echo
+R = 1×N, L = 20, choose prob=0.2 from echo
+49.6588
+48.9604
+49.682
+49.3116
+49.1178
+app = RandomWalkDomination, dataset = LiveJournal from echo
+R = 1×N, L = 6, choose prob=0.2 from echo
+15.0747
+14.5081
+14.9425
+14.9304
+14.6852
+app = Graphlet, dataset = LiveJournal from echo
+R = 10000, L = 4, choose prob=0.2 from echo
+1.96642
+1.96598
+1.97893
+1.97344
+1.97968
+app = PersonalizedPageRank, dataset = LiveJournal from echo
+R = 1000, L = 10, choose prob=0.2 from echo
+10.0997
+10.1206
+10.244
+9.73331
+10.0584
+app = SimRank, dataset = LiveJournal from echo
+R = 2000, L = 11, choose prob=0.2 from echo
+14.7676
+15.1985
+15.1642
+15.5153
+15.2646
+app = Reachability, dataset = LiveJournal from echo
+R = 1000, L = 100, choose prob=0.2 from echo
+149.225
+144.826
+162.654
+136.818
+147.012
+app = PageRank, dataset = Wikipedia from echo
+R = 1×N, L = 20, choose prob=0.2 from echo
+211.168
+211.01
+211.275
+210.934
+210.549
+app = RandomWalkDomination, dataset = Wikipedia from echo
+R = 1×N, L = 6, choose prob=0.2 from echo
+64.4494
+64.2871
+64.2936
+64.3804
+64.3213
+app = Graphlet, dataset = Wikipedia from echo
+R = 10000, L = 4, choose prob=0.2 from echo
+8.4583
+8.4505
+8.452
+8.43068
+8.38837
+app = PersonalizedPageRank, dataset = Wikipedia from echo
+R = 1000, L = 10, choose prob=0.2 from echo
+10.558
+10.8367
+10.528
+10.6312
+10.7533
+app = SimRank, dataset = Wikipedia from echo
+R = 2000, L = 11, choose prob=0.2 from echo
+28.0957
+26.6082
+27.4596
+25.7278
+26.7778
+app = Reachability, dataset = Wikipedia from echo
+R = 1000, L = 100, choose prob=0.2 from echo
+212.052
+232.619
+200.173
+10.505
+11.266
+10.9878
+27.3219
+10.4979
+228.363

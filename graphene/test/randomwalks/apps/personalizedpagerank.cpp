@@ -75,7 +75,6 @@ int main(int argc, char **argv)
 	assert(NUM_THDS==(row_par*col_par*2));
 	
 	walk_t *walk_curr=NULL;
-	walk_t *walk_next=NULL;
 	sa_t *sa_curr=NULL;
 	sa_t *sa_next=NULL;
 	vertex_t **front_queue_ptr;
@@ -90,7 +89,6 @@ int main(int argc, char **argv)
 			row_par, col_par);
 	
 	walk_curr=(walk_t *)malloc(sizeof(walk_t)*vert_count);
-	walk_next=(walk_t *)malloc(sizeof(walk_t)*vert_count);
 	
 	sa_curr=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
@@ -116,14 +114,10 @@ int main(int argc, char **argv)
 		sa_curr[i] = 0;
 		sa_next[i] = 0;
 	}
-	for(index_t i=source;i<=source;i++)
-	{
-		sa_curr[i]= walkspersource;
-
-		walk_curr[i].reserve(walkspersource);
-		for(index_t j=0;j<walkspersource;j++)
-			walk_curr[i].push_back(0);
-	}
+	sa_curr[source]= walkspersource;
+	walk_curr[source].reserve(walkspersource);
+	for(index_t j=0;j<walkspersource;j++)
+		walk_curr[source].push_back(0);
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
 	if(chunk_sz&(sizeof(vertex_t) - 1))
@@ -149,9 +143,6 @@ int main(int argc, char **argv)
 		unsigned level = 0;
 		int tid = omp_get_thread_num();
 		int comp_tid = tid >> 1;
-		comp_t *neighbors;
-		vertex_t *sources;
-		vertex_t dest, source;
 		index_t *beg_pos=NULL;
 		
 		//use all threads in 1D partition manner.
@@ -378,7 +369,7 @@ finish_point:
 				std::cout<<"\ttid=1 (IO Thread)--io_time:"<<it->io_time<<"-io_submit_time:"<<it->cd->io_submit_time<<"-io_poll_time:"<<it->cd->io_poll_time<<"-wait_comp_time:"<<it->wait_comp_time<<"\n";
 			}
 
-			if (!tid && level==num_steps) computeError(level, vert_count, sa_curr);
+			// if (!tid && level==num_steps) computeError(level, vert_count, sa_curr);
 			if(level == num_steps) break;
 //			if(tid ==0) printf("%f %f %f %f %f %f %f %f %f\n", it->sa_ptr[121]*odeg_glb[121], it->sa_ptr[27]*odeg_glb[27], it->sa_ptr[52]*odeg_glb[52], it->sa_ptr[49]*odeg_glb[49], it->sa_ptr[95]*odeg_glb[95], it->sa_ptr[1884]*odeg_glb[1884], it->sa_ptr[2]*odeg_glb[2], it->sa_ptr[12]*odeg_glb[12], it->sa_ptr[131]*odeg_glb[131]);
 
@@ -398,7 +389,6 @@ finish_point:
 	munmap(sa_next,sizeof(sa_t)*vert_count);
 	munmap(sa_curr,sizeof(sa_t)*vert_count);
 	free(walk_curr);
-	free(walk_next);
 	delete[] comm;
 	return 0;
 }

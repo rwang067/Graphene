@@ -61,6 +61,7 @@ public:
             walks[i-idx] = walks[i];
         }
         size_w = size_w - idx;
+        reserve(size_w);
     }
 
     bool isEmpty(){

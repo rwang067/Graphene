@@ -197,78 +197,36 @@ void cache_driver::load_chunk()
 	//TODO!!! THIS IS A BIG ISSUE!
 	//load_blk_off should be inited by someone else.
 	double  this_time = wtime();
-	if(*io_conserve)
-	{
-		//printf("*reqt_blk_count: %ld\n", *reqt_blk_count);
-		//- load_blk_off: next load will load from this block 
+	if(*io_conserve){
 		load_blk_off = 0;
 		*io_conserve = false;
 		
-		//reset circ_free_chunk
 		circ_free_chunk->reset_circle();
-		// std::cout << "circ_free_chunk->reset_circle();" << std::endl;
 		circ_load_chunk->reset_circle();
-		for(int i = 0; i < num_chunks; i ++)
-		{
-			//index_t beg_blk_id=cache[i]->blk_beg_off/VERT_PER_BLK;
-			//index_t end_blk_id=beg_blk_id+cache[i]->load_sz/VERT_PER_BLK;
-			//bool is_reuse=false;
-			//while(beg_blk_id<end_blk_id)
-			//{
-			//	if(reqt_blk_bitmap[beg_blk_id>>3] & (1<<(beg_blk_id&7)))
-			//	{
-			//		if(!is_reuse) is_reuse = true;
-			//		--(*reqt_blk_count);
-			//		reqt_blk_bitmap[beg_blk_id>>3] &= (~(1<<(beg_blk_id&7)));	
-			//	}
-			//	beg_blk_id++;
-			//}
-
-			//if(is_reuse)
-			//{
-			//	cache[i]->status=LOADED;
-			//	circ_load_chunk->en_circle(i);
-			//}
-			//else
-			//{
+		for(int i = 0; i < num_chunks; i ++){
 			cache[i]->status=EVICTED;
 			circ_free_chunk->en_circle(i);
-			//}
 		}
 	}
 	
-	if(circ_free_ctx->get_sz()==0)
-		return;
+	if(circ_free_ctx->get_sz()==0) return;
 	
 	index_t io_id = circ_free_ctx->de_circle();
 	struct io_req *req = io_list[io_id];
 	req->num_ios = 0;
 	
-	if(load_blk_off >= total_blks && (*reqt_blk_count != 0))
-	{
-		//std::cout<<"Exhaust all blocks not finish all requests\n";
-		//assert(*reqt_blk_count == 0);
+	if(load_blk_off >= total_blks && (*reqt_blk_count != 0)){
 		*reqt_blk_count = 0;
-
 	}
-	// if( *reqt_blk_count != 0 )
-	// 	std::cout << "*reqt_blk_count , total_blk " << *reqt_blk_count << "\t 539014"  << std::endl;
-	// vertex_t cur_vert = 0;
-	while((load_blk_off<total_blks) && (*reqt_blk_count != 0))
-	{
+	while((load_blk_off<total_blks) && (*reqt_blk_count != 0)){
 		//find a to-be-load block
 		if(reqt_blk_bitmap[load_blk_off>>3] & (1<<(load_blk_off&7)))
 		{
-			//Get one free chunk
-			//-record this chunk is submmited
-			if(circ_free_chunk->get_sz() == 0)
-			{
-				//std::cout<<"Running out of chunk$$$$$$$$\n";
+			if(circ_free_chunk->get_sz() == 0){
 				break;
 			}
 			
 			index_t chunk_id = circ_free_chunk->de_circle();
-			// std::cout << "fill_chunk : \t -->" << chunk_id << std::endl;
 			req->chunk_id[req->num_ios++] = chunk_id;
 
 			//clean this bit
@@ -373,32 +331,9 @@ void cache_driver::load_chunk_iolist()
 		//reset circ_free_chunk
 		circ_free_chunk->reset_circle();
 		circ_load_chunk->reset_circle();
-		for(int i = 0; i < num_chunks; i ++)
-		{
-			//index_t beg_blk_id=cache[i]->blk_beg_off/VERT_PER_BLK;
-			//index_t end_blk_id=beg_blk_id+cache[i]->load_sz/VERT_PER_BLK;
-			//bool is_reuse=false;
-			//while(beg_blk_id<end_blk_id)
-			//{
-			//	if(reqt_blk_bitmap[beg_blk_id>>3] & (1<<(beg_blk_id&7)))
-			//	{
-			//		if(!is_reuse) is_reuse = true;
-			//		--(*reqt_blk_count);
-			//		reqt_blk_bitmap[beg_blk_id>>3] &= (~(1<<(beg_blk_id&7)));	
-			//	}
-			//	beg_blk_id++;
-			//}
-
-			//if(is_reuse)
-			//{
-			//	cache[i]->status=LOADED;
-			//	circ_load_chunk->en_circle(i);
-			//}
-			//else
-			//{
+		for(int i = 0; i < num_chunks; i ++){
 			cache[i]->status=EVICTED;
 			circ_free_chunk->en_circle(i);
-			//}
 		}
 	}
 	
@@ -439,11 +374,6 @@ void cache_driver::load_chunk_iolist()
 			if(blk_id + 1 - beg_blk_id > blk_per_chunk) break;
 			if(blk_id - reqt_list[load_blk_off - 1] >= MAX_USELESS) break;
 			cache[chunk_id]->load_sz = (blk_id+1-beg_blk_id)*VERT_PER_BLK;
-		//	if(cache[chunk_id]->load_sz < 0) 
-		//	{
-		//		printf("blk_id %d, beg_blk_id %d, total %d\n", 
-		//				blk_id, beg_blk_id, *reqt_blk_count);
-		//	}
 
 			load_blk_off ++;
 		}

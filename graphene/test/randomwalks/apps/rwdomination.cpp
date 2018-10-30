@@ -76,6 +76,7 @@ int main(int argc, char **argv)
 	walk_t *walk_curr=NULL;
 	sa_t *sa_curr=NULL;
 	sa_t *sa_next=NULL;
+	sa_t *sa_total=NULL;
 	vertex_t **front_queue_ptr;
 	index_t *front_count_ptr;
 	vertex_t *col_ranger_ptr;
@@ -108,11 +109,22 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 
+	sa_total=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
+		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
+		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
+	
+	if(sa_total==MAP_FAILED)
+	{	
+		perror("sa_total mmap");
+		exit(-1);
+	}
+
 	//init rev_odeg and rank value
 	for(index_t i=0;i<vert_count;i++)
 	{
 		sa_curr[i]= num_walks;
 		sa_next[i] = 0;
+		sa_total[i] = 0;
 
 		walk_curr[i].reserve(num_walks);
 		for(index_t j=0;j<num_walks;j++)
@@ -138,7 +150,7 @@ int main(int argc, char **argv)
 	double tm = 0;
 #pragma omp parallel \
 	num_threads (NUM_THDS) \
-	shared(sa_next,sa_curr,comm)
+	shared(sa_next,sa_curr,sa_total, comm)
 	{
 		unsigned level = 0;
 		int tid = omp_get_thread_num();
@@ -345,6 +357,7 @@ finish_point:
 			std::cout << "beg_1d end_1d = " << beg_1d << " " << end_1d << std::endl;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
+				sa_total[vert] += sa_next[vert];
 				sa_curr[vert] = sa_next[vert];
 				sa_next[vert] = 0;
 			}

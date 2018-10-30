@@ -80,6 +80,8 @@ int main(int argc, char **argv)
 	index_t *front_count_ptr;
 	vertex_t *col_ranger_ptr;
 	index_t *comm = new index_t[NUM_THDS];
+	unsigned cnt_all, cnt_ok;
+	cnt_all = cnt_ok = 0;
 	
 	const index_t vert_count=get_vert_count
 		(comm, beg_dir,beg_header,row_par,col_par);
@@ -109,14 +111,16 @@ int main(int argc, char **argv)
 	}
 
 	//init rev_odeg and rank value
-	for(index_t i=0;i<vert_count;i++)
-	{
-		sa_curr[i]= num_walks;
+	for(index_t i=0;i<vert_count;i++){
+		sa_curr[i]= 0;
 		sa_next[i] = 0;
-
-		walk_curr[i].reserve(num_walks);
-		for(index_t j=0;j<num_walks;j++)
-			walk_curr[i].push_back(0);
+	}
+	for(unsigned i=0; i < num_walks; i++) {
+		/* Get random vertex to start walk */
+		unsigned rand_vert = rand() % vert_count;
+		unsigned walk = (( rand_vert & 0xffff ) << 16 ) | ( 1 & 0xffff );
+		walk_curr[rand_vert].push_back(walk);
+		sa_curr[rand_vert]++;
 	}
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
@@ -281,6 +285,7 @@ int main(int argc, char **argv)
 							int i;
 							for (i = 0; i < count; i++){
 								unsigned walk = walk_curr[vert_id][i];
+								unsigned hop = (unsigned)(walk & 0xffff);
 								// if(walk < level){
 								// 	std::cout << "vert_id sa_curr[vert_id] count i walk level: " << vert_id << " " << sa_curr[vert_id] << " " << count << " " << i << " " << walk << " " << level << " : ";
 								// 	for(int j =0; j < count; j++)  
@@ -289,10 +294,10 @@ int main(int argc, char **argv)
 								// 	assert(false);
 								// }
 								// assert(walk >= level);
-                				if(walk > level ) break;
+                				if(hop > level ) break;
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
-								if (((float)rand())/RAND_MAX > 0.15 && (end>beg)){
+								if ( end>beg ){
 									unsigned choosen_edge = rand() % (end-beg);
 									if(choosen_edge+beg >= num_verts){
 										critical_walks.push_back(Critical_walk(walk,choosen_edge));
@@ -306,6 +311,13 @@ int main(int argc, char **argv)
 								}
 								sa_next[dstId]++;
 								walk_curr[dstId].push_back(walk+1);
+								if( hop == num_steps-1 ){
+									unsigned s = ( walk >> 16 ) & 0xffff;
+									cnt_all++;
+									if( s == dstId ){
+										cnt_ok++;
+									}
+								}
 							}
 							if(i > 0) walk_curr[vert_id].truncate(i);
 						}
@@ -387,9 +399,11 @@ finish_point:
 		if((tid & 1) == 0) delete it;
 		
 	}
+	float res = (float)cnt_ok*1.0/cnt_all;
+	std::cout<< "Probability of trianges = " << res << std::endl;
 	std::ofstream fout;
 	fout.open("Graphene_runtimes.statistics", std::ofstream::app);
-	fout << tm << "\n" ;
+	fout << tm << std::endl;
 	fout.close();
 	munmap(sa_next,sizeof(sa_t)*vert_count);
 	munmap(sa_curr,sizeof(sa_t)*vert_count);

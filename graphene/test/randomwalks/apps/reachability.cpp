@@ -15,16 +15,10 @@
 #include "vector_w.hpp"
 
 inline bool is_active
-(index_t vert_id,
-sa_t criterion,
-sa_t *sa, sa_t *sa_prev)
-{
-	if(sa[vert_id]>0) 
-		return true;
-	// std::cout<<"vert_id: " << vert_id << std::endl;
+(index_t vert_id,sa_t criterion,sa_t *sa, sa_t *sa_prev){
+	if(sa[vert_id]>0) return true;
 	return false;
 }
-//test the git commit -v
 
 struct Critical_walk{
 	unsigned walk;
@@ -43,11 +37,11 @@ int main(int argc, char **argv)
 		<<"/path/to/beg_pos_dir /path/to/csr_dir "
 		<<"beg_header csr_header num_chunks "
 		<<"chunk_sz (#bytes) concurr_IO_ctx "
-		<<"max_continuous_useless_blk ring_vert_count num_buffs num_walks num_steps\n";
+		<<"max_continuous_useless_blk ring_vert_count num_buffs source walkspersource num_steps\n";
 
-	if(argc != 16)
+	if(argc != 18)
 	{
-		fprintf(stdout, "Wrong input, argc = %d != 16\n", argc);
+		fprintf(stdout, "Wrong input, argc = %d != 18\n", argc);
 		exit(-1);
 	}
 
@@ -69,9 +63,13 @@ int main(int argc, char **argv)
 	const index_t MAX_USELESS = atoi(argv[11]);
 	const index_t ring_vert_count = atoi(argv[12]);
 	const index_t num_buffs = atoi(argv[13]);
-	index_t num_walks = (index_t) atol(argv[14]);
-	index_t num_steps = (index_t) atol(argv[15]);
+	index_t a = (index_t) atol(argv[14]);
+	index_t b = (index_t) atol(argv[15]);
+	index_t walkspersource = (index_t) atol(argv[16]);
+	index_t num_steps = (index_t) atol(argv[17]);
 	assert(NUM_THDS==(row_par*col_par*2));
+
+	bool reachable = false;
 	
 	walk_t *walk_curr=NULL;
 	sa_t *sa_curr=NULL;
@@ -92,36 +90,31 @@ int main(int argc, char **argv)
 	sa_curr=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-	if(sa_curr==MAP_FAILED)
-	{	
+	if(sa_curr==MAP_FAILED){	
 		perror("sa_curr mmap");
 		exit(-1);
 	}
 	
 	sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-	
-	if(sa_next==MAP_FAILED)
-	{	
+		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);	
+	if(sa_next==MAP_FAILED){	
 		perror("sa_next mmap");
 		exit(-1);
 	}
 
 	//init rev_odeg and rank value
-	for(index_t i=0;i<vert_count;i++)
-	{
-		sa_curr[i]= num_walks;
+	for(index_t i=0;i<vert_count;i++){
+		sa_curr[i] = 0;
 		sa_next[i] = 0;
-
-		walk_curr[i].reserve(num_walks);
-		for(index_t j=0;j<num_walks;j++)
-			walk_curr[i].push_back(0);
 	}
+	sa_curr[a]= walkspersource;
+	walk_curr[a].reserve(walkspersource);
+	for(index_t j=0;j<walkspersource;j++)
+		walk_curr[a].push_back(0);
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
-	if(chunk_sz&(sizeof(vertex_t) - 1))
-	{
+	if(chunk_sz&(sizeof(vertex_t) - 1)){
 		std::cout<<"Page size wrong\n";
 		exit(-1);
 	}
@@ -143,9 +136,6 @@ int main(int argc, char **argv)
 		unsigned level = 0;
 		int tid = omp_get_thread_num();
 		int comp_tid = tid >> 1;
-		comp_t *neighbors;
-		vertex_t *sources;
-		vertex_t dest, source;
 		index_t *beg_pos=NULL;
 		
 		//use all threads in 1D partition manner.
@@ -186,7 +176,7 @@ int main(int argc, char **argv)
 		if(tid==0) std::cout<<"Start random walks ... \n";	
 		while(true)
 		{
-			if(tid==0) std::cout<<"Start running level " << level << std::endl;
+			std::cout<<"Start running level " << level << std::endl;
 			//- Framework gives user block to process
 			//- Figures out what blocks needed next level
 			if((tid & 1) == 0)
@@ -204,7 +194,6 @@ int main(int argc, char **argv)
 				//as long as not 0
 			}
 
-			index_t front_count = 0;
 			double convert_tm = 0;	
 			double ltm=wtime();
 
@@ -221,25 +210,21 @@ int main(int argc, char **argv)
 #pragma omp barrier
 
 			double process_tm = 0;
-			if((tid & 1) == 0)
-			{ 
+			if((tid & 1) == 0){ 
 				int s, e ; 
 				s = e = 0;
 				double beg_tm = wtime();
-				while(true)
-				{	
+				while(true){	
 					int chunk_id = -1;
 					double blk_tm = wtime();
-					while((chunk_id = it->cd->circ_load_chunk->de_circle())
-							== -1)
-					{
-						if(it->is_bsp_done)
-						{
+					while((chunk_id = it->cd->circ_load_chunk->de_circle()) == -1){
+						if(it->is_bsp_done){
 							chunk_id = it->cd->circ_load_chunk->de_circle();
 							break;
 						}
 					}
 					it->wait_io_time += (wtime() - blk_tm);
+					// std::cout  << "chunk_id=" << chunk_id << "\t load_chunk_sz " << it->cd->circ_load_chunk->get_sz() <<"\t free_chunk_sz :" << it->cd->circ_free_chunk->get_sz() << std::endl;
 
 					if(chunk_id == -1) break;
 					struct chunk *pinst = it->cd->cache[chunk_id];	
@@ -247,8 +232,8 @@ int main(int argc, char **argv)
 					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
 
-					// if(s<2)
-					// 	std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
+					if(s==0 && chunk_id!=0 )
+						std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
 
 					//process one chunk
 					double pro_tm = wtime();
@@ -261,20 +246,19 @@ int main(int argc, char **argv)
 							index_t end = beg_pos[vert_id + 1 - it->row_ranger_beg] - blk_beg_off;
 
 							//possibly vert_id starts from preceding data block.
+							//there by beg<0 is possible
 							if(beg<0){
 								// beg = 0;
-								// std::cout << "vert with beg < 0, vert_id = " << vert_id << std::endl;
 								for(int i = 0; i < critical_walks.size(); i++){
 									assert(critical_walks[i].choosen_edgeid+beg>=0);
 									vertex_t dstId = pinst->buff[critical_walks[i].choosen_edgeid + beg];
 									sa_next[dstId]++;
 									walk_curr[dstId].push_back(critical_walks[i].walk+1);
 								}
+								critical_walks.clear();
 							}
 							if(end>num_verts){
-								// end = num_verts;
-								// std::cout << "vert with end>num_verts, vert_id = " << vert_id << " " << end << " " << num_verts << std::endl;
-								critical_walks.clear();
+								assert(critical_walks.empty());
 							}
 					
 							index_t count = (index_t) walk_curr[vert_id].size();
@@ -282,19 +266,19 @@ int main(int argc, char **argv)
 							for (i = 0; i < count; i++){
 								unsigned walk = walk_curr[vert_id][i];
 								// if(walk < level){
-								// 	std::cout << "vert_id sa_curr[vert_id] count i walk level: " << vert_id << " " << sa_curr[vert_id] << " " << count << " " << i << " " << walk << " " << level << " : ";
+								// 	std::cout << "vert_id count i walk level: " << vert_id << " " << count << " " << i << " " << walk << " " << level << " : ";
 								// 	for(int j =0; j < count; j++)  
-								// 		std::cout << walk_curr[vert_id][j] << " ";
+								// 		std::cout << walk_curr[vert_id][i] << " ";
 								// 	std::cout << std::endl;
-								// 	assert(false);
+								// 	continue;
 								// }
 								// assert(walk >= level);
                 				if(walk > level ) break;
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
-								if (((float)rand())/RAND_MAX > 0.15 && (end>beg)){
+								if ( end > beg ){
 									unsigned choosen_edge = rand() % (end-beg);
-									if(choosen_edge+beg >= num_verts){
+									if(end>num_verts && choosen_edge+beg >= num_verts){
 										critical_walks.push_back(Critical_walk(walk,choosen_edge));
 										continue;
 									}else{
@@ -302,37 +286,29 @@ int main(int argc, char **argv)
 										dstId = pinst->buff[choosen_edge + beg];
 									}
 								}else{
-									dstId = rand() % vert_count;
+									dstId = a;
 								}
 								sa_next[dstId]++;
 								walk_curr[dstId].push_back(walk+1);
+								if(dstId == b ) reachable = true;
 							}
-							if(i > 0) walk_curr[vert_id].truncate(i);
+							walk_curr[vert_id].truncate(i);
 						}
 						vert_id++;
 
-						if(vert_id >= it->row_ranger_end){
-							// std::cout  << "chunk_id= " << chunk_id << "\t" << pinst->beg_vert << "\t" << vert_id-1 << "\t" << e++ <<  std::endl;
-							break;}
-						if(beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off > num_verts) { 
-							// std::cout  << "chunk_id=" << chunk_id << "\t" << pinst->beg_vert << "\t" <<  vert_id-1 << "\t" << e++ <<  std::endl;
-							break;}
+						if(vert_id >= it->row_ranger_end) break;
+						if(beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off > num_verts) break;
 					}
-					critical_walks.clear();
 					process_tm += (wtime() - pro_tm);
 
 					pinst->status = EVICTED;
 					assert(it->cd->circ_free_chunk->en_circle(chunk_id)!= -1);
-					// std::cout << "free_chunk : \tXX " << chunk_id << std::endl;
 
 				}
-				it->front_count[comp_tid] = front_count;
 				it->comp_time += (wtime() - beg_tm); 
 			}
-			else
-			{
-				while(it->is_bsp_done == false)
-				{
+			else{
+				while(it->is_bsp_done == false){
 					it->load_key(level);
 					// it->load_kv_vert_full(level);
 					//it->load_key_iolist(level);
@@ -340,11 +316,9 @@ int main(int argc, char **argv)
 			}
 
 finish_point:
-			++level;
+			;
 #pragma omp barrier
-			std::cout << "beg_1d end_1d = " << beg_1d << " " << end_1d << std::endl;
-			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
-			{
+			for(vertex_t vert = beg_1d;vert < end_1d; vert ++){
 				sa_curr[vert] = sa_next[vert];
 				sa_next[vert] = 0;
 			}
@@ -359,16 +333,9 @@ finish_point:
 			for(int i = 0 ;i< NUM_THDS; ++i)
 				total_sz += comm[i];
 			total_sz >>= 1;//total size doubled
-			
-			// if(!tid) std::cout<<"@level-"<<(int)level
-			// 	<<"-font-leveltime-converttm-iotm-waitiotm-waitcomptm-iosize: "
-			// 	<<front_count<<" "<<ltm<<" "<<convert_tm<<" "<<it->io_time
-			// 	<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
-			// 	<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
-			// 	<<total_sz<<"\n";
 
 			if(!tid){
-				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
+				std::cout<<"@level-"<<(int)level<<"-leveltime:"<<ltm<< "\n";
 				std::cout<<"\tconvert_tm:"<<convert_tm<<"\n";
 				std::cout<<"\ttid=0 (Compute Thread)--comp_time:"<<it->comp_time<<"-wait_io_time:"<<it->wait_io_time<<"-process_time:"<<process_tm<<"\n";
 				std::cout<<"\ttid=1 (IO Thread)--io_time:"<<it->io_time<<"-io_submit_time:"<<it->cd->io_submit_time<<"-io_poll_time:"<<it->cd->io_poll_time<<"-wait_comp_time:"<<it->wait_comp_time<<"\n";
@@ -376,7 +343,7 @@ finish_point:
 
 			// if (!tid && level==num_steps) computeError(level, vert_count, sa_curr);
 			if(level == num_steps) break;
-//			if(tid ==0) printf("%f %f %f %f %f %f %f %f %f\n", it->sa_ptr[121]*odeg_glb[121], it->sa_ptr[27]*odeg_glb[27], it->sa_ptr[52]*odeg_glb[52], it->sa_ptr[49]*odeg_glb[49], it->sa_ptr[95]*odeg_glb[95], it->sa_ptr[1884]*odeg_glb[1884], it->sa_ptr[2]*odeg_glb[2], it->sa_ptr[12]*odeg_glb[12], it->sa_ptr[131]*odeg_glb[131]);
+			++level;
 
 		}
 
@@ -387,6 +354,7 @@ finish_point:
 		if((tid & 1) == 0) delete it;
 		
 	}
+	std::cout << "Reachable = " << reachable << std::endl;
 	std::ofstream fout;
 	fout.open("Graphene_runtimes.statistics", std::ofstream::app);
 	fout << tm << "\n" ;

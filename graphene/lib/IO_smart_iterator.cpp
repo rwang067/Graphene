@@ -396,25 +396,8 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 				}
 			}
 		}
-	
-	//means we start a new iteration
-	//we should do some IO-conserving work in next()
-//	if(my_level < usr_level)
-//	{
-		io_conserve = true;
-		std::cout << "reqt_blk_count , total_blk " << reqt_blk_count << "\t 539014"  << std::endl;
-//		my_level = usr_level;
-	//}
-	
-//for(int i = 0; i< 1; ++i)
-//{
-//	if(i == comp_tid) 
-//if(comp_tid==0)		std::cout<<"Thread "<<comp_tid<<" #blk="<<reqt_blk_count<<
-//			" #freechunks="<<cd->circ_free_chunk->num_elem<<
-//			" #freectx="<<cd->circ_free_ctx->num_elem<<
-//			"\n";
-//	#pragma omp barrier
-//}
+	io_conserve = true;
+	std::cout << "reqt_blk_count , total_blk " << reqt_blk_count << "\t "  << total_blks << std::endl;
 }
 
 //Problematic for larger than 2^31 verts
