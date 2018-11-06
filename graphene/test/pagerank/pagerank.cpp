@@ -10,7 +10,7 @@
 #include <algorithm>
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
-#include "outputLog.hpp"
+//#include "outputLog.hpp"
 
 inline bool is_active
 (index_t vert_id,
@@ -435,7 +435,7 @@ finish_point:
 				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
 				<<total_sz<<"\n";
 				
-			if (!tid && level==iteration) printLog(level, vert_count, sa_curr, beg_dir, true);
+//			if (!tid && level==iteration) printLog(level, vert_count, sa_curr, beg_dir, true);
 			if(level == iteration) break;
 //			if(tid ==0) printf("%f %f %f %f %f %f %f %f %f\n", it->sa_ptr[121]*odeg_glb[121], it->sa_ptr[27]*odeg_glb[27], it->sa_ptr[52]*odeg_glb[52], it->sa_ptr[49]*odeg_glb[49], it->sa_ptr[95]*odeg_glb[95], it->sa_ptr[1884]*odeg_glb[1884], it->sa_ptr[2]*odeg_glb[2], it->sa_ptr[12]*odeg_glb[12], it->sa_ptr[131]*odeg_glb[131]);
 

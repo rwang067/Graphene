@@ -324,7 +324,7 @@ int main(int argc, char **argv)
 									assert(0);
 								}
 							}
-							walk_curr[vert_id].truncate(i);
+						//	walk_curr[vert_id].truncate(i);
 						}
 						vert_id++;
 
