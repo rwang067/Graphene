@@ -76,6 +76,7 @@ int main(int argc, char **argv)
 	assert(NUM_THDS==(row_par*col_par*2));
 	
 	walk_t *walk_curr=NULL;
+	std::cout<<"size of walk_t ： "<< sizeof(walk_t)<<"\n";
 	sa_t *sa_curr=NULL;
 	sa_t *sa_next=NULL;
 	vertex_t **front_queue_ptr;
