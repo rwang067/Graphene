@@ -260,6 +260,7 @@ int main(int argc, char **argv)
 					{
 						if( sa_curr[vert_id] > 0 ) //if there are some walks in the vertex
 						{
+							// std::cout << "vert_id = " << vert_id << ", sa_curr[vert_id] = " << sa_curr[vert_id] << ". \n";
 							// get a vertex with beg and end in buff --> vertex_id
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off;
 							index_t end = beg_pos[vert_id + 1 - it->row_ranger_beg] - blk_beg_off;
@@ -294,7 +295,8 @@ int main(int argc, char **argv)
 								// 	assert(false);
 								// }
 								// assert(walk >= level);
-                				if(hop > level ) break;
+								// std::cout << "vert_id = " << vert_id << ", hop = " << hop << ", level = " << level << ". \n";
+                				if(hop > level+1 ) break;
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
 								if ( end>beg ){
@@ -309,6 +311,7 @@ int main(int argc, char **argv)
 								}else{
 									dstId = rand() % vert_count;
 								}
+								// std::cout << " --> " << dstId;
 								sa_next[dstId]++;
 								walk_curr[dstId].push_back(walk+1);
 								if( hop == num_steps-1 ){
@@ -354,12 +357,15 @@ int main(int argc, char **argv)
 finish_point:
 			++level;
 #pragma omp barrier
-			std::cout << "beg_1d end_1d = " << beg_1d << " " << end_1d << std::endl;
+			std::cout << "beg_1d = " << beg_1d << ", end_1d = " << end_1d << ". \n";
+			unsigned walksum = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
 				sa_curr[vert] = sa_next[vert];
 				sa_next[vert] = 0;
+				walksum += sa_curr[vert];
 			}
+			if(tid == 0) std::cout << "remain walks = " << walksum << " , level = " << level << std::endl;
 #pragma omp barrier
 			ltm = wtime() - ltm;
 
@@ -399,6 +405,7 @@ finish_point:
 		if((tid & 1) == 0) delete it;
 		
 	}
+	std::cout<< "cnt_all = " << cnt_all << ", cnt_ok = " << cnt_ok << std::endl;
 	float res = (float)cnt_ok*1.0/cnt_all;
 	std::cout<< "Probability of trianges = " << res << std::endl;
 	std::ofstream fout;

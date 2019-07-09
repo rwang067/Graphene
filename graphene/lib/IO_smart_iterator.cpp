@@ -397,7 +397,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 			}
 		}
 	io_conserve = true;
-	std::cout << "reqt_blk_count , total_blk " << reqt_blk_count << "\t "  << total_blks << std::endl;
+	std::cout << "reqt_blk_count = " << reqt_blk_count << ", total_blk = "  << total_blks << std::endl;
 }
 
 //Problematic for larger than 2^31 verts

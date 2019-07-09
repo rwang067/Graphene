@@ -13,13 +13,23 @@ progress of experiments:
 	mv wikipedia_sorted.data-split* wikipedia_sorted.data_Graphene/row_0_col_0/wikipedia_sorted.data-split*
 运行：
 	in 64G server(Yahoo) :
-	./bin/apps/simrank 2 2 8 /home/dell/graph/ /home/dell/graph/ Yahoo/yahoo-webmap.txt_Graphene/yahoo-webmap.txt-split_beg Yahoo/yahoo-webmap.txt_Graphene/yahoo-webmap.txt-split_csr 8 2097152 4 32 16 128 4 9 1 2
+	./bin/apps/simrank 2 2 8 /home/dell/graph/ /home/dell/graph/ 
+		Yahoo/yahoo-webmap.txt_Graphene/yahoo-webmap.txt-split_beg 
+		Yahoo/yahoo-webmap.txt_Graphene/yahoo-webmap.txt-split_csr 
+		8 2097152 4 32 16 128 4 9 1 2
 
 	in 64G server(Friendster):
-	./bin/apps/simrank 2 2 8 /home/dell/graph/ /home/dell/graph/ Friendster/out.friendster-reorder_Graphene/out.friendster-reorder-split_beg Friendster/out.friendster-reorder_Graphene/out.friendster-reorder-split_csr 8 2097152 4 32 16 128 4 9 1 2
+	./bin/apps/simrank 2 2 8 /home/dell/graph/ /home/dell/graph/ 
+		Friendster/out.friendster-reorder_Graphene/out.friendster-reorder-split_beg 
+		Friendster/out.friendster-reorder_Graphene/out.friendster-reorder-split_csr 
+		8 2097152 4 32 16 128 4 9 1 2
 
 	in 8G PC(wiki):
-	./apps/pagerank 1 1 2 '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene' '/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene/' wikipedia_sorted.data-split_beg wikipedia_sorted.data-split_csr 8 2097152 4 32 16 128 1 2 
+	./apps/pagerank 1 1 2 
+		'/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene' 
+		'/home/wang/Documents/DataSet/Wikipedia/wikipedia_sorted.data_Graphene/' 
+		wikipedia_sorted.data-split_beg wikipedia_sorted.data-split_csr 
+		8 2097152 4 32 16 128 1 2 
 	error:
 	./apps/pagerank: ../../lib/IO_smart_iterator.cpp:40: IO_smart_iterator::IO_smart_iterator(bool, vertex_t**&, index_t*&, vertex_t*&, int, index_t*, int, int, const char*, const char*, const char*, const char*, index_t, size_t, sa_t*&, sa_t*&, index_t*&, index_t, index_t, index_t, index_t, cb_func): Assertion 'reqt_list != MAP_FAILED' failed.
 	Aborted (core dumped)
