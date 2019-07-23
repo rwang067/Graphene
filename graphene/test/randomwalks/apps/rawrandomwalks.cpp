@@ -352,6 +352,7 @@ finish_point:
 			++level;
 #pragma omp barrier
 			std::cout << "beg_1d = " << beg_1d << ", end_1d = " << end_1d << ". \n";
+			double assign_tm = wtime();	
 			remain_walks = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
@@ -360,6 +361,7 @@ finish_point:
 				remain_walks += sa_curr[vert];
 				walk_next[vert].clear();
 			}
+			assign_tm = wtime() - assign_tm;
 			// if(tid == 0) std::cout << " ---- remain walks = " << remain_walks << " , level = " << level << std::endl;
 #pragma omp barrier
 			ltm = wtime() - ltm;
@@ -383,6 +385,7 @@ finish_point:
 			if(!tid){
 				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
 				std::cout<<"\tconvert_tm:"<<convert_tm<<"\n";
+				std::cout<<"\assign_tm:"<<assign_tm<<"\n";
 				std::cout<<"\ttid=0 (Compute Thread)-- comp_time:"<<it->comp_time << "\n" 
 				         <<"                        -- wait_io_time:"<<it->wait_io_time << "\n" 
 				         <<"                        -- process_time:"<<process_tm<<"\n";
