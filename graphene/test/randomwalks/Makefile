@@ -30,7 +30,7 @@ deps =	$(wildcard ../../lib/*.h) \
 				Makefile
 
 #flags+=-L$(shell dirname $(cucc))/../lib64 -lcuda -lcudart
-apps: apps/pagerank apps/rwdomination apps/graphlet apps/personalizedpagerank apps/simrank apps/reachability apps/rawrandomwalks 
+apps: apps/rwdomination apps/graphlet apps/personalizedpagerank apps/simrank apps/rawrandomwalks 
 
 apps/% : apps/%.o $(objs) 
 	@mkdir -p bin/$(@D)

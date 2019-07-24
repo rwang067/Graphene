@@ -4,3 +4,8 @@ graphene/test/rw_pr/iostat_pagerank.log
 *.o
 *.log
 *.bin
+*/bin/*
+graphene/test/randomwalks/bin/*
+graphene/test/randomwalks/Graphene_runtimes.statistics
+graphene/test/randomwalks/run.sh
+.vscode/settings.json

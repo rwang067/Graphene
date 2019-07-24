@@ -12,10 +12,13 @@
 #include "get_vert_count.hpp"
 #include "get_col_ranger.hpp"
 #include "comperror.hpp"
-// #include "vector_w.hpp"
+#include "vector_w.hpp"
 
-inline bool is_active(index_t vert_id,
-sa_t criterion,sa_t *sa, sa_t *sa_prev){
+inline bool is_active
+(index_t vert_id,
+sa_t criterion,
+sa_t *sa, sa_t *sa_prev)
+{
 	if(sa[vert_id]>0) 
 		return true;
 	// std::cout<<"vert_id: " << vert_id << std::endl;
@@ -40,11 +43,11 @@ int main(int argc, char **argv)
 		<<"/path/to/beg_pos_dir /path/to/csr_dir "
 		<<"beg_header csr_header num_chunks "
 		<<"chunk_sz (#bytes) concurr_IO_ctx "
-		<<"max_continuous_useless_blk ring_vert_count num_buffs num_walks num_steps\n";
+		<<"max_continuous_useless_blk ring_vert_count num_buffs source walkspersource num_steps\n";
 
-	if(argc != 16)
+	if(argc != 18)
 	{
-		fprintf(stdout, "Wrong input, argc = %d != 16\n", argc);
+		fprintf(stdout, "Wrong input, argc = %d != 18\n", argc);
 		exit(-1);
 	}
 
@@ -66,10 +69,16 @@ int main(int argc, char **argv)
 	const index_t MAX_USELESS = atoi(argv[11]);
 	const index_t ring_vert_count = atoi(argv[12]);
 	const index_t num_buffs = atoi(argv[13]);
-	sa_t num_walks = (sa_t) atol(argv[14]);
-	unsigned num_steps = (unsigned) atol(argv[15]);
+	index_t a = (index_t) atol(argv[14]);
+	index_t b = (index_t) atol(argv[15]);
+	index_t walkspersource = (index_t) atol(argv[16]);
+	index_t num_steps = (index_t) atol(argv[17]);
 	assert(NUM_THDS==(row_par*col_par*2));
 	
+	walk_t *walk_curr=NULL;
+	std::cout<<"size of walk_t ： "<< sizeof(walk_t)<<"\n";
+	sa_t *sa_curr=NULL;
+	sa_t *sa_next=NULL;
 	vertex_t **front_queue_ptr;
 	index_t *front_count_ptr;
 	vertex_t *col_ranger_ptr;
@@ -81,18 +90,8 @@ int main(int argc, char **argv)
 			front_count_ptr, beg_dir, beg_header,
 			row_par, col_par);
 	
-	std::vector<unsigned> *walk_curr=NULL;
-	std::vector<unsigned> *walk_next=NULL;
-	walk_curr=(std::vector<unsigned> *)malloc(sizeof(std::vector<unsigned>)*vert_count);
-	walk_next=(std::vector<unsigned> *)malloc(sizeof(std::vector<unsigned>)*vert_count);
-
-	sa_t *remain_walks = new sa_t[NUM_THDS];	
-	for(int i = 0; i < NUM_THDS; i++)
-		remain_walks[i] = 0;
-	sa_t *sa_curr=NULL;
-	sa_t *sa_total=NULL;
-	// sa_t *sa_next=NULL;
-
+	walk_curr=(walk_t *)malloc(sizeof(walk_t)*vert_count);
+	
 	sa_curr=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
@@ -102,33 +101,39 @@ int main(int argc, char **argv)
 		exit(-1);
 	}
 	
-	// sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
-	// 	PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
-	// 	| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
-	
-	// if(sa_next==MAP_FAILED)
-	// {	
-	// 	perror("sa_next mmap");
-	// 	exit(-1);
-	// }
-
-	sa_total=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
+	sa_next=(sa_t *)mmap(NULL,sizeof(sa_t)*vert_count,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
 	
-	if(sa_total==MAP_FAILED)
+	if(sa_next==MAP_FAILED)
 	{	
-		perror("sa_total mmap");
+		perror("sa_next mmap");
 		exit(-1);
 	}
 
+	std::vector<unsigned> walksfroma;
+	std::vector<unsigned> walksfromb;
+	walksfroma.resize(walkspersource*num_steps);
+	walksfromb.resize(walkspersource*num_steps);
+	memset(walksfroma.data(), 0xffffffff, walksfroma.size()*sizeof(unsigned));
+	memset(walksfromb.data(), 0xffffffff, walksfromb.size()*sizeof(unsigned));
+
 	//init rev_odeg and rank value
 	for(index_t i=0;i<vert_count;i++){
-		unsigned walk = (( i & 0xffff ) << 16 ) | ( 0 & 0xffff );
-		walk_curr[i].push_back(walk);
-		sa_curr[i]= 1;
-		sa_total[i] = 0;
-		remain_walks[0]++;
+		sa_curr[i] = 0;
+		sa_next[i] = 0;
+	}
+	sa_curr[a]= walkspersource;
+	walk_curr[a].reserve(walkspersource);
+	for(index_t i=0;i<walkspersource;i++){
+		unsigned walk = (( a & 0xffff ) << 16 ) | ( (i*num_steps) & 0xffff ) ;
+		walk_curr[a].push_back(walk);
+	}
+	sa_curr[b]= walkspersource;
+	walk_curr[b].reserve(walkspersource);
+	for(index_t i=0;i<walkspersource;i++){
+		unsigned walk = (( b & 0xffff ) << 16 ) | ( (i*num_steps) & 0xffff ) ;
+		walk_curr[b].push_back(walk);
 	}
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
@@ -139,7 +144,7 @@ int main(int argc, char **argv)
 	}
 
 	char cmd[256];
-	sprintf(cmd,"%s"," iostat -x 1 -k > iostat_randomwalks.log&");
+	sprintf(cmd,"%s","iostat -x 1 -k > iostat_randomwalks.log&");
 	std::cout<<cmd<<"\n";
 	//exit(-1);
 
@@ -150,14 +155,11 @@ int main(int argc, char **argv)
 	double tm = 0;
 #pragma omp parallel \
 	num_threads (NUM_THDS) \
-	shared(walk_curr,walk_next,sa_curr,comm)
+	shared(sa_next,sa_curr,comm)
 	{
 		unsigned level = 0;
 		int tid = omp_get_thread_num();
 		int comp_tid = tid >> 1;
-		comp_t *neighbors;
-		vertex_t *sources;
-		vertex_t dest, source;
 		index_t *beg_pos=NULL;
 		
 		//use all threads in 1D partition manner.
@@ -195,11 +197,10 @@ int main(int argc, char **argv)
 		
 		if(!tid) system((const char *)cmd);
 #pragma omp barrier
-		if(tid==0) std::cout<<"\nStart random walks ... \n";	
+		if(tid==0) std::cout<<"Start random walks ... \n";	
 		while(true)
 		{
-			if(tid==0) std::cout<<" \nStart running level " << level <<", -- Remain number of walks = " << remain_walks[tid] << std::endl;
-			remain_walks[1] = 0;
+			std::cout<<"Start running level " << level << std::endl;
 			//- Framework gives user block to process
 			//- Figures out what blocks needed next level
 			if((tid & 1) == 0)
@@ -223,8 +224,8 @@ int main(int argc, char **argv)
 
 			if ((tid&1)==0)
 			{
-				it->is_bsp_done = false;
 				it->req_translator(0);
+				it->is_bsp_done = false;
 				convert_tm = wtime() - convert_tm;
 			}
 			else
@@ -234,11 +235,8 @@ int main(int argc, char **argv)
 #pragma omp barrier
 
 			double process_tm = 0;
-			if(tid==0) std::cout << "  Load graph and forward walks in parallel..." << std::endl;
 			if((tid & 1) == 0)
-			{ 
-				int s, e ; 
-				s = e = 0;
+			{ int s, e ; s = e = 0;
 				double beg_tm = wtime();
 				while(true)
 				{	
@@ -254,85 +252,80 @@ int main(int argc, char **argv)
 						}
 					}
 					it->wait_io_time += (wtime() - blk_tm);
+					// std::cout  << "chunk_id=" << chunk_id << "\t load_chunk_sz " << it->cd->circ_load_chunk->get_sz() <<"\t free_chunk_sz :" << it->cd->circ_free_chunk->get_sz() << std::endl;
 
 					if(chunk_id == -1) break;
 					struct chunk *pinst = it->cd->cache[chunk_id];	
 					index_t blk_beg_off = pinst->blk_beg_off;
-					index_t num_verts = pinst->load_sz; //acturally the number of out-edges
+					index_t num_verts = pinst->load_sz;
 					vertex_t vert_id = pinst->beg_vert;
 
-					// if(s<2)
-					// 	std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
+					// if(level==0)
+						// std::cout  << "chunk_id=" << chunk_id << "\tbeg_vert=" << pinst->beg_vert << "\tnum_verts=" << num_verts << "\tblk_beg_off =" << blk_beg_off << "\t" << "                     s =" << s++ <<  std::endl;
 
-					//process one chunk, process vertices one by one
+					//process one chunk
 					double pro_tm = wtime();
 					while(true)
 					{
 						if( sa_curr[vert_id] > 0 ) //if there are some walks in the vertex
 						{
-							// std::cout << "vert_id = " << vert_id ;//<< ", sa_curr[vert_id] = " << sa_curr[vert_id] << ". \n";
-							remain_walks[1] += sa_curr[vert_id];
 							// get a vertex with beg and end in buff --> vertex_id
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off;
 							index_t end = beg_pos[vert_id + 1 - it->row_ranger_beg] - blk_beg_off;
 
 							//possibly vert_id starts from preceding data block.
+							//there by beg<0 is possible
 							if(beg<0){
 								// beg = 0;
-								std::cout << "!!!!! vert with beg < 0, chunk_id= " << chunk_id << ", vert_id = " << vert_id << ", pinst->beg_vert = " << pinst->beg_vert << ", critical_walks.size() = " << critical_walks.size() << std::endl;
 								for(int i = 0; i < critical_walks.size(); i++){
-									std::cout << "beg = " << beg << ", critical_walks[i].choosen_edgeid = " << critical_walks[i].choosen_edgeid << std::endl;
-									if(critical_walks[i].choosen_edgeid+beg < 0 )
-										continue;
 									assert(critical_walks[i].choosen_edgeid+beg>=0);
 									vertex_t dstId = pinst->buff[critical_walks[i].choosen_edgeid + beg];
-									walk_next[dstId].push_back(critical_walks[i].walk+1);
+									sa_next[dstId]++;
+									walk_curr[dstId].push_back(critical_walks[i].walk+1);
 								}
-								critical_walks.clear();
-								vert_id++;
-								continue;
 							}
 							if(end>num_verts){
 								// end = num_verts;
-								// std::cout << "vert with end>num_verts, vert_id = " << vert_id << " " << end << " " << num_verts << std::endl;
+								critical_walks.clear();
 							}
 					
 							index_t count = (index_t) walk_curr[vert_id].size();
-							assert(count==sa_curr[vert_id]);
 							int i;
 							for (i = 0; i < count; i++){
 								unsigned walk = walk_curr[vert_id][i];
 								unsigned hop = (unsigned)(walk & 0xffff);
-								// if(walk < level){
-								// 	std::cout << "vert_id sa_curr[vert_id] count i walk level: " << vert_id << " " << sa_curr[vert_id] << " " << count << " " << i << " " << walk << " " << level << " : ";
-								// 	for(int j =0; j < count; j++)  
-								// 		std::cout << walk_curr[vert_id][j] << " ";
-								// 	std::cout << std::endl;
-								// 	assert(false);
-								// }
-								assert(hop == level);
-								// std::cout << "vert_id = " << vert_id << ", hop = " << hop << ", level = " << level << ". \n";
-                				// if(hop > level+1 ) break;
+								unsigned s = ( walk >> 16 ) & 0xffff;
+                				if(hop%num_steps > level ) break;
+								// if(vert_id==114114 && i > 1000) std::cout << "i walk " << i << " " << walk << std::endl;
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
-								if ( end>beg && ((float)rand())/RAND_MAX < 0.85){
+								if ( (end>beg)){
 									unsigned choosen_edge = rand() % (end-beg);
 									if(choosen_edge+beg >= num_verts){
 										critical_walks.push_back(Critical_walk(walk,choosen_edge));
-										std::cout << "add critical_walks : " << vert_id << " --> " << choosen_edge << std::endl;
 										continue;
 									}else{
 										assert(choosen_edge+beg < num_verts);
 										dstId = pinst->buff[choosen_edge + beg];
-										// std::cout << " #--> " << dstId;
 									}
 								}else{
-									dstId = rand() % vert_count;
-									// std::cout << " $--> " << dstId;
+									dstId = s;
 								}
-								// sa_next[dstId]++;
-								walk_next[dstId].push_back(walk+1);
+								sa_next[dstId]++;
+								walk_curr[dstId].push_back(walk+1);
+
+								
+								// std::cout << "update : " << s << " " << (unsigned)(walk & 0xfff) << " " << l << " " << dstId << " " << r << std::endl;
+								if( s == a )
+									walksfroma[hop] = dstId;
+								else if( s == b )
+									walksfromb[hop] = dstId;
+								else{
+									std::cout << "Wrong source s : " << s << std::endl;
+									assert(0);
+								}
 							}
+						//	walk_curr[vert_id].truncate(i);
 						}
 						vert_id++;
 
@@ -340,11 +333,9 @@ int main(int argc, char **argv)
 							// std::cout  << "chunk_id= " << chunk_id << "\t" << pinst->beg_vert << "\t" << vert_id-1 << "\t" << e++ <<  std::endl;
 							break;}
 						if(beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off > num_verts) { 
-							// std::cout  << "chunk_id=" << chunk_id << "\t" << pinst->beg_vert << "\t" <<  vert_id << "\t" << it->row_ranger_end << "\t" << e++ <<  std::endl;
-							break;
-						}
+							// std::cout  << "chunk_id=" << chunk_id << "\t" << pinst->beg_vert << "\t" <<  vert_id-1 << "\t" << e++ <<  std::endl;
+							break;}
 					}
-					// critical_walks.clear();
 					process_tm += (wtime() - pro_tm);
 
 					pinst->status = EVICTED;
@@ -368,26 +359,12 @@ int main(int argc, char **argv)
 finish_point:
 			++level;
 #pragma omp barrier
-			if(tid==1) std::cout << "   $$-- remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
-			double assign_tm = wtime();	
-			remain_walks[tid] = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
-				walk_curr[vert] = walk_next[vert];
-				sa_curr[vert] = walk_curr[vert].size();
-				remain_walks[tid] += sa_curr[vert];
-				walk_next[vert].clear();
-				sa_total[vert] += sa_curr[vert];
-				// if(sa_curr[vert]>0) std::cout << "tid = " << tid << "   -- sa_curr[" << vert << "] = " << sa_curr[vert] << std::endl;
+				sa_curr[vert] = sa_next[vert];
+				sa_next[vert] = 0;
 			}
-			std::cout << "   -- level = " << level << ",  remain walks[" << tid << "] = " << remain_walks[tid] << ", [beg_1d, end_1d] = [" << beg_1d << ", " << end_1d << "]" << std::endl;
 #pragma omp barrier
-			if(tid == 0) {
-				for(int i = 1 ;i< NUM_THDS; ++i)
-					remain_walks[0] += remain_walks[i];
-				std::cout << "   ---- sum: remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
-			}
-			assign_tm = wtime() - assign_tm;
 			ltm = wtime() - ltm;
 
 			if(tid == 0) tm += ltm;
@@ -399,24 +376,18 @@ finish_point:
 				total_sz += comm[i];
 			total_sz >>= 1;//total size doubled
 			
-			// if(!tid) std::cout<<"@level-"<<(int)level
-			// 	<<"-font-leveltime-converttm-iotm-waitiotm-waitcomptm-iosize: "
-			// 	<<front_count<<" "<<ltm<<" "<<convert_tm<<" "<<it->io_time
-			// 	<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
-			// 	<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
-			// 	<<total_sz<<"\n";
+			if(!tid) std::cout<<"@level-"<<(int)level
+				<<"-font-leveltime-converttm-iotm-waitiotm-waitcomptm-iosize: "
+				<<front_count<<" "<<ltm<<" "<<convert_tm<<" "<<it->io_time
+				<<"("<<it->cd->io_submit_time<<","<<it->cd->io_poll_time<<") "
+				<<" "<<it->wait_io_time<<" "<<it->wait_comp_time<<" "
+				<<total_sz<<"\n";
 
 			if(!tid){
 				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
-				std::cout<<"\t convert_tm:"<<convert_tm<<"\n";
-				std::cout<<"\t assign_tm:"<<assign_tm<<"\n";
-				std::cout<<"\t tid=0 (Compute Thread)-- comp_time:"<<it->comp_time << "\n" 
-				         <<"                         -- wait_io_time:"<<it->wait_io_time << "\n" 
-				         <<"                         -- process_time:"<<process_tm<<"\n";
-				std::cout<<"\t tid=1 (IO Thread)--io_time:"<<it->io_time << "\n" 
-				         <<"                         -- io_submit_time:"<<it->cd->io_submit_time << "\n" 
-				         <<"                         -- io_poll_time:"<<it->cd->io_poll_time << "\n" 
-				         <<"                         -- wait_comp_time:"<<it->wait_comp_time<<"\n";
+				std::cout<<"\tconvert_tm:"<<convert_tm<<"\n";
+				std::cout<<"\ttid=0 (Compute Thread)--comp_time:"<<it->comp_time<<"-wait_io_time:"<<it->wait_io_time<<"-process_time:"<<process_tm<<"\n";
+				std::cout<<"\ttid=1 (IO Thread)--io_time:"<<it->io_time<<"-io_submit_time:"<<it->cd->io_submit_time<<"-io_poll_time:"<<it->cd->io_poll_time<<"-wait_comp_time:"<<it->wait_comp_time<<"\n";
 			}
 
 			// if (!tid && level==num_steps) computeError(level, vert_count, sa_curr);
@@ -432,14 +403,25 @@ finish_point:
 		if((tid & 1) == 0) delete it;
 		
 	}
+	float simrank = 0;
+	for( unsigned i = 0; i < walkspersource; i++ )
+		for( unsigned j = 0; j < walkspersource; j++ )
+			for( unsigned l = 0; l < num_steps; l++ ){
+				// std::cout << i << " " << j << " " << l << " : " << walksfroma[i*L+l] << " " << walksfromb[j*R+l] << std::endl;
+				if( walksfroma[i*num_steps+l] == walksfromb[j*num_steps+l] && walksfroma[i*num_steps+l] != 0xffffffff ){
+					simrank += (1.0/(walkspersource*walkspersource))*pow(0.8, l);
+					// std::cout << i << " " << j << " " << l << " " << walksfroma[i*L+l] << " " << simrank << std::endl;
+					break;
+				}
+			}
+	std::cout << "Simrank = " << simrank << std::endl;
 	std::ofstream fout;
 	fout.open("Graphene_runtimes.statistics", std::ofstream::app);
-	fout << tm << std::endl;
+	fout << tm << "\n" ;
 	fout.close();
-	// munmap(sa_next,sizeof(sa_t)*vert_count);
+	munmap(sa_next,sizeof(sa_t)*vert_count);
 	munmap(sa_curr,sizeof(sa_t)*vert_count);
 	free(walk_curr);
-	free(walk_next);
 	delete[] comm;
 	return 0;
 }

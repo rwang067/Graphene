@@ -26,7 +26,7 @@ inline index_t get_col_ranger(
 
 	if(file != NULL)
 	{
-		printf("col-ranger file is found\n");
+		printf(" col-ranger file is found\n");
 		size_t ret = fread(col_ranger_ptr, sizeof(vertex_t), 
 				(num_cols + 1) * num_rows, file);
 		assert(ret == (num_cols + 1) * num_rows);

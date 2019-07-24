@@ -1,4 +1,10 @@
 progress of experiments:
+2019.7.24
+	//LJ
+	./bin/apps/rawrandomwalks 1 1 2 '/home/wang/Documents/DataSet/LiveJournal/soc-LiveJournal1.txt_Graphene/' '/home/wang/Documents/DataSet/LiveJournal/soc-LiveJournal1.txt_Graphene' soc-LiveJournal1.txt-split_beg soc-LiveJournal1.txt-split_csr 8 20971520 4 32 16 128 10000 11
+
+	//FS
+	./bin/apps/rawrandomwalks 1 1 2 '/home/wang/Documents/DataSet/Friendster/out.friendster-reorder_Graphene/' '/home/wang/Documents/DataSet/Friendster/out.friendster-reorder_Graphene/' out.friendster-reorder-split_beg out.friendster-reorder-split_csr 8 20971520 4 32 16 128 10000 4
 
 2018.8.26
 预处理：

@@ -35,7 +35,7 @@ inline index_t get_vert_count(
 	}
 	
 	vert_count /= col_par;
-	printf("Vertex count: %ld\n", vert_count);
+	printf(" Vertex count: %ld\n", vert_count);
 	
 	return vert_count;
 }

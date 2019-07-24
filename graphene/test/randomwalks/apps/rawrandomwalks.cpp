@@ -112,10 +112,10 @@ int main(int argc, char **argv)
 	// }
 
 	//init rev_odeg and rank value
-	// for(index_t i=0;i<vert_count;i++){
-	// 	sa_curr[i]= 0;
-	// 	sa_next[i] = 0;
-	// }
+	for(index_t i=0;i<vert_count;i++){
+		sa_curr[i]= 0;
+		// sa_next[i] = 0;
+	}
 	for(unsigned i=0; i < num_walks; i++) {
 		/* Get random vertex to start walk */
 		unsigned rand_vert = rand() % vert_count;

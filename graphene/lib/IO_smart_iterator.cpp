@@ -32,7 +32,7 @@ IO_smart_iterator::IO_smart_iterator(
 {
 	//reqt_list
 	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
-	std::cout << "total_blks = " << total_blks << std::endl;
+	std::cout << " total_blks = " << total_blks << std::endl;
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks,
 	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
@@ -83,7 +83,7 @@ IO_smart_iterator::IO_smart_iterator(
 
 	front_queue[comp_tid] = new vertex_t[col_ranger_end - col_ranger_beg];
 	
-	if(omp_get_thread_num()==0)std::cout<<"Before cd init\n";
+	// if(omp_get_thread_num()==0)std::cout<<"Before cd init\n";
 
 	//allocate cache driver
 	cd = new cache_driver(
@@ -97,7 +97,7 @@ IO_smart_iterator::IO_smart_iterator(
 			num_chunks, 
 			chunk_sz, 
 			io_limit,MAX_USELESS);
-	if(omp_get_thread_num()==0)std::cout<<"Finished cd init\n";
+	// if(omp_get_thread_num()==0)std::cout<<"Finished cd init\n";
 }
 
 IO_smart_iterator::IO_smart_iterator(
@@ -397,7 +397,7 @@ void IO_smart_iterator::req_translator(sa_t criterion)
 			}
 		}
 	io_conserve = true;
-	std::cout << "reqt_blk_count = " << reqt_blk_count << ", total_blk = "  << total_blks << std::endl;
+	std::cout << " ** reqt_blk_count = " << reqt_blk_count << ", total_blk = "  << total_blks << std::endl;
 }
 
 //Problematic for larger than 2^31 verts
