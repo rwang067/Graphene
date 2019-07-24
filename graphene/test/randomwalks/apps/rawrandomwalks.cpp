@@ -16,7 +16,7 @@
 
 inline bool is_active(index_t vert_id,
 sa_t criterion,sa_t *sa, sa_t *sa_prev){
-	if(sa[vert_id]>0) 
+	// if(sa[vert_id]>0) 
 		return true;
 	// std::cout<<"vert_id: " << vert_id << std::endl;
 	return false;
@@ -401,13 +401,13 @@ finish_point:
 				std::cout<<"@level-"<<(int)level<<"-font:"<<front_count<<"-leveltime:"<<ltm<< "\n";
 				std::cout<<"\t convert_tm:"<<convert_tm<<"\n";
 				std::cout<<"\t assign_tm:"<<assign_tm<<"\n";
-			// 	std::cout<<"\t tid=0 (Compute Thread)-- comp_time:"<<it->comp_time << "\n" 
-			// 	         <<"                         -- wait_io_time:"<<it->wait_io_time << "\n" 
-			// 	         <<"                         -- process_time:"<<process_tm<<"\n";
-			// 	std::cout<<"\t tid=1 (IO Thread)--io_time:"<<it->io_time << "\n" 
-			// 	         <<"                         -- io_submit_time:"<<it->cd->io_submit_time << "\n" 
-			// 	         <<"                         -- io_poll_time:"<<it->cd->io_poll_time << "\n" 
-			// 	         <<"                         -- wait_comp_time:"<<it->wait_comp_time<<"\n";
+				std::cout<<"\t tid=0 (Compute Thread)-- comp_time:"<<it->comp_time << "\n" 
+				         <<"                         -- wait_io_time:"<<it->wait_io_time << "\n" 
+				         <<"                         -- process_time:"<<process_tm<<"\n";
+				std::cout<<"\t tid=1 (IO Thread)--io_time:"<<it->io_time << "\n" 
+				         <<"                         -- io_submit_time:"<<it->cd->io_submit_time << "\n" 
+				         <<"                         -- io_poll_time:"<<it->cd->io_poll_time << "\n" 
+				         <<"                         -- wait_comp_time:"<<it->wait_comp_time<<"\n";
 			}
 
 			// if (!tid && level==num_steps) computeError(level, vert_count, sa_curr);
