@@ -16,7 +16,7 @@
 
 inline bool is_active(index_t vert_id,
 sa_t criterion,sa_t *sa, sa_t *sa_prev){
-	// if(sa[vert_id]>0) 
+	if(sa[vert_id]>0) 
 		return true;
 	// std::cout<<"vert_id: " << vert_id << std::endl;
 	return false;
