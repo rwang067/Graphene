@@ -438,6 +438,7 @@ finish_point:
 	fout.close();
 	// munmap(sa_next,sizeof(sa_t)*vert_count);
 	munmap(sa_curr,sizeof(sa_t)*vert_count);
+	munmap(sa_total,sizeof(sa_t)*vert_count);
 	free(walk_curr);
 	free(walk_next);
 	delete[] comm;

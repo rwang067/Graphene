@@ -308,6 +308,7 @@ int main(int argc, char **argv)
 							for (i = 0; i < count; i++){
 								unsigned walk = walk_curr[vert_id][i];
 								unsigned hop = (unsigned)(walk & 0xffff);
+								unsigned s = ( walk >> 16 ) & 0xffff;
 								// if(walk < level){
 								// 	std::cout << "vert_id sa_curr[vert_id] count i walk level: " << vert_id << " " << sa_curr[vert_id] << " " << count << " " << i << " " << walk << " " << level << " : ";
 								// 	for(int j =0; j < count; j++)  
@@ -345,7 +346,7 @@ int main(int argc, char **argv)
 									walksfromb[hop] = dstId;
 								else{
 									std::cout << "Wrong source s : " << s << std::endl;
-									assert(0);
+									// assert(0);
 								}
 							}
 						}
