@@ -359,13 +359,19 @@ int main(int argc, char **argv)
 
 finish_point:
 			++level;
+			double assign_tm = wtime();	
+			std::vector<unsigned> *walk_temp=NULL;
+			if(tid==0){
+				walk_temp = walk_curr;
+				walk_curr = walk_next;
+				walk_next = walk_temp;
+			}
 #pragma omp barrier
 			if(tid==1) std::cout << "   $$-- remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
-			double assign_tm = wtime();	
 			remain_walks[tid] = 0;
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
-				walk_curr[vert] = walk_next[vert];
+				// walk_curr[vert] = walk_next[vert];
 				sa_curr[vert] = walk_curr[vert].size();
 				remain_walks[tid] += sa_curr[vert];
 				walk_next[vert].clear();
