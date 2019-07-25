@@ -1,0 +1,60 @@
+2019.7.12 compare with Graphene SSD 64GB R730
+app = RandomWalkDomination, dataset = Friendster from echo
+R = 1×N, L = 6, choose prob=0.2 from echo
+181.522
+181.688
+179.526
+180.038
+178.048
+app = Graphlet, dataset = Friendster from echo
+R = 100000, L = 4, choose prob=0.2 from echo
+4.77916
+4.8413
+4.82777
+4.79595
+4.78416
+app = PersonalizedPageRank, dataset = Friendster from echo
+R = 1000, L = 10, choose prob=0.2 from echo
+4.98502
+4.98732
+4.96614
+4.94249
+4.99218
+app = SimRank, dataset = Friendster from echo
+R = 2000, L = 11, choose prob=0.2 from echo
+6.25829
+6.36698
+6.52295
+6.24417
+6.3007
+app = RandomWalkDomination, dataset = Yahoo from echo
+R = 1×N, L = 6, choose prob=0.2 from echo
+app = Graphlet, dataset = Yahoo from echo
+R = 100000, L = 4, choose prob=0.2 from echo
+app = PersonalizedPageRank, dataset = Yahoo from echo
+R = 1000, L = 10, choose prob=0.2 from echo
+app = SimRank, dataset = Yahoo from echo
+R = 2000, L = 11, choose prob=0.2 from echo
+app = RandomWalkDomination, dataset = Yahoo from echo
+R = 1×N, L = 6, choose prob=0.2 from echo
+app = Graphlet, dataset = Yahoo from echo
+R = 100000, L = 4, choose prob=0.2 from echo
+55.1129
+55.4598
+56.0367
+55.8751
+55.7698
+app = PersonalizedPageRank, dataset = Yahoo from echo
+R = 1000, L = 10, choose prob=0.2 from echo
+93.2452
+94.0456
+92.774
+94.2086
+94.1442
+app = SimRank, dataset = Yahoo from echo
+R = 2000, L = 11, choose prob=0.2 from echo
+102.422
+103.751
+110.701
+101.541
+103.747
