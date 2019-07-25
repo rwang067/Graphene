@@ -62,7 +62,7 @@ cache_driver::cache_driver(
 		
 	//using a big buffer for all chunks
 	buff=NULL;
-	std::cout << " before mmap : chunk_sz*num_chunks : " << chunk_sz<< " " << num_chunks << " " << chunk_sz*num_chunks << std::endl;
+	std::cout << " before mmap buff: chunk_sz*num_chunks : " << chunk_sz<< " " << num_chunks << " " << chunk_sz*num_chunks << std::endl;
 	buff=(vertex_t *)mmap(NULL,chunk_sz*num_chunks,
 		PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 		| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);

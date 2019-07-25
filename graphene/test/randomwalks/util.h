@@ -6,7 +6,7 @@
 
 typedef long index_t;
 typedef unsigned int  vertex_t;
-typedef unsigned long long sa_t; // number of walks
+typedef unsigned int sa_t; // number of walks
 typedef VECTOR_W walk_t;
 // typedef std::vector<unsigned> walk_t;
 typedef unsigned char bit_t;

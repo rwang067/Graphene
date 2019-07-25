@@ -381,7 +381,6 @@ finish_point:
 			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
 			{
 				// walk_curr[vert] = walk_next[vert];
-				walk_curr[vert] = walk_next[vert];
 				sa_curr[vert] = walk_curr[vert].size();
 				remain_walks[tid] += sa_curr[vert];
 				walk_next[vert].clear();

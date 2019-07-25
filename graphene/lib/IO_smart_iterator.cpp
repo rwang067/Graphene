@@ -33,6 +33,7 @@ IO_smart_iterator::IO_smart_iterator(
 	//reqt_list
 	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 	std::cout << " total_blks = " << total_blks << std::endl;
+	std::cout << " before mmap reqt_list: total_blks * 8 : " << total_blks*8 << std::endl;
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks,
 	// reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 10,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
@@ -125,6 +126,7 @@ IO_smart_iterator::IO_smart_iterator(
 			beg_pos, MAX_USELESS, io_limit, p_func)
 {
 	//reqt_list
+	std::cout << " before mmap reqt_list: sizeof(index_t) * total_blks * 4 : " << sizeof(index_t) * total_blks * 4 << std::endl;
 	reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * total_blks * 4,
 	//reqt_list = (index_t *)mmap(NULL, sizeof(index_t) * 33554432,//FOR FRIENDSTER/TWITTER
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
@@ -250,6 +252,7 @@ IO_smart_iterator::IO_smart_iterator(
 	
 	if(sz_beg & (BLK_SZ-1)) sz_beg += BLK_SZ - (sz_beg&(BLK_SZ -1));
 	
+	std::cout << " before mmap beg_pos: sz_beg : " << sz_beg << std::endl;
 	beg_pos=(index_t *)mmap(NULL,sz_beg,
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
@@ -308,6 +311,7 @@ IO_smart_iterator::IO_smart_iterator(
 	if(total_blks & (VERT_PER_BLK-1)) ++total_blks;
 
 	//add 64 more bits, in order for quick bitmap scan.
+	std::cout << " before mmap reqt_blk_bitmap: ((total_blks>>3)+8) : " << ((total_blks>>3)+8) << std::endl;
 	reqt_blk_bitmap=(bit_t *)mmap(NULL,((total_blks>>3)+8) * sizeof(bit_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
@@ -317,6 +321,7 @@ IO_smart_iterator::IO_smart_iterator(
 		exit(-1);
 	}
 	
+	std::cout << " before mmap blk_beg_vert: total_blks*4 : " << total_blks*4 << std::endl;
 	blk_beg_vert=(vertex_t *)mmap(NULL,total_blks * sizeof(vertex_t),
 			PROT_READ | PROT_WRITE,MAP_PRIVATE | MAP_ANONYMOUS 
 			| MAP_HUGETLB | MAP_HUGE_2MB, 0, 0);
