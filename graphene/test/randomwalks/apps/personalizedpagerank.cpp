@@ -40,9 +40,10 @@ int main(int argc, char **argv)
 		<<"/path/to/beg_pos_dir /path/to/csr_dir "
 		<<"beg_header csr_header num_chunks "
 		<<"chunk_sz (#bytes) concurr_IO_ctx "
-		<<"max_continuous_useless_blk ring_vert_count num_buffs source walkspersource num_steps\n";
+		<<"max_continuous_useless_blk ring_vert_count num_buffs "
+		<<"firstsource numsources \n";//walkspersource num_steps\n";
 
-	if(argc != 17)
+	if(argc != 16)
 	{
 		fprintf(stdout, "Wrong input, argc = %d != 16\n", argc);
 		exit(-1);
@@ -66,9 +67,10 @@ int main(int argc, char **argv)
 	const index_t MAX_USELESS = atoi(argv[11]);
 	const index_t ring_vert_count = atoi(argv[12]);
 	const index_t num_buffs = atoi(argv[13]);
-	index_t source = (index_t) atol(argv[14]);
-	index_t walkspersource = (index_t) atol(argv[15]);
-	index_t num_steps = (index_t) atol(argv[16]);
+	index_t firstsource = (index_t) atol(argv[14]);
+	index_t numsources = (index_t) atol(argv[15]);
+	index_t walkspersource = 2000;//(index_t) atol(argv[16]);
+	index_t num_steps = 10;//(index_t) atol(argv[17]);
 	assert(NUM_THDS==(row_par*col_par*2));
 	
 	vertex_t **front_queue_ptr;
@@ -130,11 +132,14 @@ int main(int argc, char **argv)
 		// sa_next[i] = 0;
 	}
 
-	sa_curr[source]= walkspersource;
-	unsigned walk = (( source & 0xffff ) << 16 ) | ( 0 & 0xffff );
-	for(index_t j=0;j<walkspersource;j++){
-		walk_curr[source].push_back(walk);
-		remain_walks[0]++;
+	for(index_t i = 0; i < numsources; i++){
+		index_t source = firstsource + i;
+		sa_curr[source]= walkspersource;
+		unsigned walk = (( source & 0xffff ) << 16 ) | ( 0 & 0xffff );
+		for(index_t j=0;j<walkspersource;j++){
+			walk_curr[source].push_back(walk);
+			remain_walks[0]++;
+		}
 	}
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
