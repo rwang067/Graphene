@@ -1,0 +1,47 @@
+\n\n########################################################
+2019.9.5 compare with Graphene/GraFSoft by msppr in Friendster in SSD 64GB R730
+MSPPR from echo, 2000*10 walks for each source, numsources from 10^0 to 10^7
+app = MSPPR, dataset = Friendster from echo
+numsources =  1 , fixed 2000*10 walks for each soource from echo
+22.394
+26.0212
+25.4912
+24.4593
+25.032
+numsources =  10 , fixed 2000*10 walks for each soource from echo
+23.2116
+23.7361
+26.7079
+24.8049
+27.828
+numsources =  100 , fixed 2000*10 walks for each soource from echo
+25.7177
+27.6339
+25.2063
+25.3405
+25.0387
+numsources =  1000 , fixed 2000*10 walks for each soource from echo
+29.2428
+30.4306
+28.2354
+31.7253
+29.34
+numsources =  10000 , fixed 2000*10 walks for each soource from echo
+42.7723
+44.17
+46.8241
+44.234
+43.5972
+numsources =  100000 , fixed 2000*10 walks for each soource from echo
+116.555
+118.954
+135.756
+134.29
+117.478
+numsources =  1000000 , fixed 2000*10 walks for each soource from echo
+562.66
+507.403
+497.521
+498.563
+493.585
+numsources =  10000000 , fixed 2000*10 walks for each soource from echo
