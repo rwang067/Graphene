@@ -41,11 +41,12 @@ int main(int argc, char **argv)
 		<<"beg_header csr_header num_chunks "
 		<<"chunk_sz (#bytes) concurr_IO_ctx "
 		<<"max_continuous_useless_blk ring_vert_count num_buffs "
-		<<"firstsource numsources \n";//walkspersource num_steps\n";
+		<<"firstsource numsources "
+		<<"(walkspersource num_steps)\n";
 
-	if(argc != 16)
+	if(argc < 16)
 	{
-		fprintf(stdout, "Wrong input, argc = %d != 16\n", argc);
+		fprintf(stdout, "Wrong input, argc = %d < 16\n", argc);
 		exit(-1);
 	}
 
@@ -71,6 +72,10 @@ int main(int argc, char **argv)
 	index_t numsources = (index_t) atol(argv[15]);
 	index_t walkspersource = 2000;//(index_t) atol(argv[16]);
 	index_t num_steps = 10;//(index_t) atol(argv[17]);
+	if(argc > 16){
+		walkspersource = (index_t) atol(argv[16]);
+		num_steps = (index_t) atol(argv[17]);
+	}
 	assert(NUM_THDS==(row_par*col_par*2));
 	
 	vertex_t **front_queue_ptr;
