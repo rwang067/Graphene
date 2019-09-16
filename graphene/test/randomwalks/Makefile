@@ -1,12 +1,13 @@
 exe = aio_randomwalks.bin
 
-cc = "$(shell which g++ -std=c1x)" 
+cc = "$(shell which g++)" 
+# cc = "$(shell which g++ -std=c1x)" 
 cucc= "$(shell which nvcc)"
 
 
 #cuflags= -gencode=arch=compute_35,code=\"sm_35,compute_35\"  -Xptxas -v -Xcudafe -\# -Xptxas -abi=no -m64 -I"/usr/local/cuda/bin/../include" -I. -I../../../ -I../../../b40c -O3 -D_FORCE_INLINES
 # flags = -I../../lib/ -I. -laio -fopenmp -O3 -g
-flags = -I../../lib/ -I. -laio -fopenmp -O0 -g
+flags = -I../../lib/ -I. -laio -fopenmp -O0 -g -w
 
 flags+=-DKV_BOTH_SORTING -DBLK_SZ=512 
 ifeq ($(time), 1)

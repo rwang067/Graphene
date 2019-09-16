@@ -68,15 +68,17 @@ int main(int argc, char **argv)
 	const index_t MAX_USELESS = atoi(argv[11]);
 	const index_t ring_vert_count = atoi(argv[12]);
 	const index_t num_buffs = atoi(argv[13]);
-	index_t firstsource = (index_t) atol(argv[14]);
-	index_t numsources = (index_t) atol(argv[15]);
-	index_t walkspersource = 2000;//(index_t) atol(argv[16]);
-	index_t num_steps = 10;//(index_t) atol(argv[17]);
+	vertex_t firstsource = (vertex_t) atol(argv[14]);
+	vertex_t numsources = (vertex_t) atol(argv[15]);
+	vertex_t walkspersource = 2000;//(index_t) atol(argv[16]);
+	vertex_t num_steps = 10;//(index_t) atol(argv[17]);
 	if(argc > 16){
-		walkspersource = (index_t) atol(argv[16]);
-		num_steps = (index_t) atol(argv[17]);
+		walkspersource = (vertex_t) atol(argv[16]);
+		num_steps = (vertex_t) atol(argv[17]);
 	}
 	assert(NUM_THDS==(row_par*col_par*2));
+	std::cout << "\nStart walks from sources [" << firstsource << ", " << firstsource + numsources << "), " 
+			  << walkspersource << " * " << num_steps << " walks per source. \n" << std::endl;
 	
 	vertex_t **front_queue_ptr;
 	index_t *front_count_ptr;
@@ -141,10 +143,11 @@ int main(int argc, char **argv)
 		index_t source = firstsource + i;
 		sa_curr[source]= walkspersource;
 		unsigned walk = (( source & 0xffff ) << 16 ) | ( 0 & 0xffff );
+		walk_curr[source].resize(walkspersource);
 		for(index_t j=0;j<walkspersource;j++){
-			walk_curr[source].push_back(walk);
-			remain_walks[0]++;
+			walk_curr[source][j] = walk;
 		}
+		remain_walks[0] += walkspersource;
 	}
   
 	const index_t vert_per_chunk = chunk_sz / sizeof(vertex_t);
@@ -177,9 +180,9 @@ int main(int argc, char **argv)
 		index_t *beg_pos=NULL;
 		
 		//use all threads in 1D partition manner.
-		index_t step_1d = vert_count / NUM_THDS;
-		index_t beg_1d = tid * step_1d;
-		index_t end_1d = beg_1d + step_1d;
+		vertex_t step_1d = vert_count / NUM_THDS;
+		vertex_t beg_1d = tid * step_1d;
+		vertex_t end_1d = beg_1d + step_1d;
 		if(tid==NUM_THDS-1) end_1d = vert_count;
 		
 		if((tid&1) == 0) 
@@ -250,9 +253,10 @@ int main(int argc, char **argv)
 #pragma omp barrier
 
 			double process_tm = 0;
-			if(tid==0) std::cout << "  Load graph and forward walks in parallel..." << std::endl;
+			if(tid==0) std::cout << " tid = 0, Load graph ..." << std::endl;
 			if((tid & 1) == 0)
 			{ 
+				std::cout << " tid = 1, Forward walks in parallel..." << std::endl;
 				int s, e ; 
 				s = e = 0;
 				double beg_tm = wtime();
@@ -271,7 +275,12 @@ int main(int argc, char **argv)
 					}
 					it->wait_io_time += (wtime() - blk_tm);
 
+
 					if(chunk_id == -1) break;
+					if(chunk_id < 0 || chunk_id >= num_chunks) {
+						std::cout << "Warning: tid = 1, Wrong chunk_id = " << chunk_id << std::endl;
+						break;
+					}
 					struct chunk *pinst = it->cd->cache[chunk_id];	
 					index_t blk_beg_off = pinst->blk_beg_off;
 					index_t num_verts = pinst->load_sz; //acturally the number of out-edges
@@ -286,7 +295,7 @@ int main(int argc, char **argv)
 					{
 						if( sa_curr[vert_id] > 0 ) //if there are some walks in the vertex
 						{
-							// std::cout << "vert_id = " << vert_id ;//<< ", sa_curr[vert_id] = " << sa_curr[vert_id] << ". \n";
+							// std::cout << "Debug Info: vert_id = " << vert_id << ", sa_curr[vert_id] = " << sa_curr[vert_id] << ". \n";
 							remain_walks[1] += sa_curr[vert_id];
 							// get a vertex with beg and end in buff --> vertex_id
 							index_t beg = beg_pos[vert_id - it->row_ranger_beg] - blk_beg_off;
@@ -323,8 +332,10 @@ int main(int argc, char **argv)
 								// 	std::cout << std::endl;
 								// 	assert(false);
 								// }
-								assert(hop == level);
-								// std::cout << "vert_id = " << vert_id << ", hop = " << hop << ", level = " << level << ". \n";
+								if(hop != level){
+									std::cout << "Warning (hop != level): vert_id = " << vert_id << ", hop = " << hop << ", level = " << level << ". \n";
+									// assert(false);
+								}
                 				// if(hop > level+1 ) break;
 								vertex_t dstId;
 								//if there is out-neighbors , with 0.85 random select one
@@ -380,31 +391,28 @@ int main(int argc, char **argv)
 
 finish_point:
 			++level;
-			double assign_tm = wtime();	
-			std::vector<unsigned> *walk_temp=NULL;
-			if(tid==0){
-				walk_temp = walk_curr;
-				walk_curr = walk_next;
-				walk_next = walk_temp;
-			}
+			double assign_tm = wtime();
 #pragma omp barrier
-			if(tid==1) std::cout << "   $$-- remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
+			if(tid==1) std::cout << "Info (end of level) : remain walks = " << remain_walks[tid] << std::endl;
 			remain_walks[tid] = 0;
-			for(vertex_t vert = beg_1d;vert < end_1d; vert ++)
+			for(vertex_t vert = beg_1d; vert < end_1d; vert++)
 			{
-				// walk_curr[vert] = walk_next[vert];
-				sa_curr[vert] = walk_curr[vert].size();
+				sa_curr[vert] = walk_next[vert].size();
 				remain_walks[tid] += sa_curr[vert];
-				walk_next[vert].clear();
 				sa_total[vert] += sa_curr[vert];
-				// if(sa_curr[vert]>0) std::cout << "tid = " << tid << "   -- sa_curr[" << vert << "] = " << sa_curr[vert] << std::endl;
+
+				walk_curr[vert].clear();
+				if(sa_curr[vert] > 0){
+					walk_curr[vert] = walk_next[vert];
+					walk_next[vert] = std::vector<unsigned>();
+				}
 			}
-			std::cout << "   -- level = " << level << ",  remain walks[" << tid << "] = " << remain_walks[tid] << ", [beg_1d, end_1d] = [" << beg_1d << ", " << end_1d << "]" << std::endl;
+			std::cout << "Info (distribution) : remain walks[" << tid << "] = " << remain_walks[tid] << ", [beg_1d, end_1d) = [" << beg_1d << ", " << end_1d << ")" << std::endl;
 #pragma omp barrier
 			if(tid == 0) {
 				for(int i = 1 ;i< NUM_THDS; ++i)
 					remain_walks[0] += remain_walks[i];
-				std::cout << "   ---- sum: remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
+				std::cout << "Info (before new level) : remain walks[" << tid << "] = " << remain_walks[tid] << " , level = " << level << std::endl;
 			}
 			assign_tm = wtime() - assign_tm;
 			ltm = wtime() - ltm;
