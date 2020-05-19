@@ -1,0 +1,81 @@
+8.80752
+2020.5.16 compare with Graphene/GraFSoft by Raw Randomwalks in Friendster in Node2( SSD 64GB R730 ）
+Raw RW from echo, R*10 walks from echo
+app = RawRW, dataset = Friendster from echo
+R =  1000 , fixed R*10 walks from echo
+28.7308
+28.8314
+29.2958
+25.8455
+27.1877
+R =  10000 , fixed R*10 walks from echo
+30.3009
+30.9425
+33.3512
+30.5885
+32.731
+R =  100000 , fixed R*10 walks from echo
+57.5836
+57.3214
+57.4382
+58.9284
+58.1379
+R =  1000000 , fixed R*10 walks from echo
+234.691
+233.328
+232.691
+232.203
+237.573
+R =  10000000 , fixed R*10 walks from echo
+369.995
+373.335
+370.228
+371.634
+371.561
+R =  100000000 , fixed R*10 walks from echo
+455.633
+R =  1000000000 , fixed R*10 walks from echo
+
+
+
+
+2020.5.17 compare with Graphene/GraFSoft by Raw Randomwalks in Twitter in Node2( SSD 64GB R730 ）
+Raw RW from echo, R*10 walks from echo
+app = RawRW, dataset = Twitter from echo
+R =  1000 , fixed R*10 walks from echo
+24.3771
+25.108
+23.6203
+22.9508
+24.6926
+R =  10000 , fixed R*10 walks from echo
+27.8249
+28.875
+30.9432
+28.783
+29.1607
+R =  100000 , fixed R*10 walks from echo
+55.9384
+54.7052
+56.7647
+57.8078
+56.8169
+R =  1000000 , fixed R*10 walks from echo
+139.08
+137.852
+139.212
+138.403
+138.412
+R =  10000000 , fixed R*10 walks from echo
+152.547
+151.443
+151.756
+152.205
+152.48
+R =  100000000 , fixed R*10 walks from echo
+359.55
+364.711
+359.151
+364.115
+352.875
+R =  1000000000 , fixed R*10 walks from echo
